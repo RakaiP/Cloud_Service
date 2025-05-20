@@ -83,4 +83,8 @@ This metadata service is part of a larger cloud file service platform, working a
 - Sync Service - Manages file synchronization
 - User Auth Service - Handles authentication and authorization
 
+<<<<<<< HEAD
 The services communicate through RESTful APIs and can be orchestrated together using the root `docker-compose.yml` file.
+=======
+The services communicate through RESTful APIs and can be orchestrated together using the root `docker-compose.yml` file.
+>>>>>>> ba2b2eb56daca6d9c07df4f6c3b896b654bdab6e
