@@ -1,6 +1,4 @@
-Here's your completed `README.md` file — you can now copy-paste this directly into your repository:
 
-```markdown
 # Cloud File Service – Microservices Collaboration
 
 This project is a **microservices-based cloud file storage system** built by **Rakai** and **Ken** as part of our learning journey. It follows a modular design where each contributor builds their services independently before integrating everything into a unified system.
@@ -12,13 +10,11 @@ This project is a **microservices-based cloud file storage system** built by **R
 We have separated our services to work independently in the development phase:
 
 ```
-
 cloud-file-service/
 ├── cloud-file-service-rakai/   ← Rakai's microservices
 ├── cloud-file-service-ken/     ← Ken's microservices
 └── cloud-file-service-final/   ← Combined services (final integration)
-
-````
+```
 
 Each contributor's folder contains their own:
 - Backend services (e.g. metadata, block storage)
@@ -57,9 +53,9 @@ To start a service:
 ```bash
 cd cloud-file-service-rakai
 docker-compose up --build
-````
+```
 
-When integrated into `cloud-file-service-final/`, we will run:
+When integrated into `cloud-file-service-final/`, run:
 
 ```bash
 cd cloud-file-service-final
@@ -81,10 +77,8 @@ Final integration will happen when both sides are stable.
 
 ## 🤝 Credits
 
-* **Rakai Andaru Priandra**
-* **Ken \[last name if you want to add]**
+* **Rakai Andaru Priandra**  
+* **Ken [last name if you want to add]**
 
-Special thanks to our lecturers, GitHub Copilot (sometimes 😅), Claude AI, DeepSeek, ChatGPT (that's a lot of AI), YouTube tutorials,
+Special thanks to our lecturers, GitHub Copilot (sometimes 😅), Claude AI, DeepSeek, ChatGPT (that's a lot of AI), YouTube tutorials,  
 and all the StackOverflow legends.
-
-
