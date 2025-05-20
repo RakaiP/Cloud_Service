@@ -1,84 +1,86 @@
+# Metadata Service
 
-# Cloud File Service – Microservices Collaboration
+This service manages file metadata, versioning, and chunking for the cloud file service platform.
 
-This project is a **microservices-based cloud file storage system** built by **Rakai** and **Ken** as part of our learning journey. It follows a modular design where each contributor builds their services independently before integrating everything into a unified system.
+## Features
 
----
+- File metadata storage and retrieval
+- File versioning system
+- Support for chunked file uploads
+- RESTful API following OpenAPI standards
 
-## 🧱 Repository Structure
+## Running with Docker
 
-We have separated our services to work independently in the development phase:
+### Prerequisites
 
-```
-cloud-file-service/
-├── cloud-file-service-rakai/   ← Rakai's microservices
-├── cloud-file-service-ken/     ← Ken's microservices
-└── cloud-file-service-final/   ← Combined services (final integration)
-```
+- Docker and Docker Compose installed on your system
 
-Each contributor's folder contains their own:
-- Backend services (e.g. metadata, block storage)
-- Dockerfiles
-- `.env` configurations
-- `docker-compose.yml` for local orchestration
-
----
-
-## 🔄 Integration Plan
-
-Once both contributors finalize their own services:
-1. We will move our stable services to `cloud-file-service-final/`.
-2. Combine `docker-compose.yml` to orchestrate all services and databases.
-3. Test inter-service communication, databases, and frontends as one system.
-
----
-
-## 🔧 Tech Stack
-
-- **FastAPI** for backend APIs
-- **PostgreSQL** for metadata storage
-- **Docker & Docker Compose** for containerization
-- **Pydantic & SQLAlchemy** for models and ORM
-- **Node.js/Express (planned)** for authentication (Ken)
-- **MongoDB or S3 (planned)** for block storage
-
----
-
-## 📦 How to Run (Dev)
-
-Each service (e.g. Rakai’s metadata service) has its own `docker-compose.yml`.
-
-To start a service:
+### Starting the service
 
 ```bash
-cd cloud-file-service-rakai
-docker-compose up --build
+# Start both the metadata service and its PostgreSQL database
+docker-compose up
+
+# Run in detached mode
+docker-compose up -d
 ```
 
-When integrated into `cloud-file-service-final/`, run:
+The API will be available at http://localhost:8000 with interactive documentation at http://localhost:8000/docs.
+
+### Stopping the service
 
 ```bash
-cd cloud-file-service-final
-docker-compose up --build
+docker-compose down
 ```
 
----
+## Running without Docker
 
-## 🚧 Work in Progress
+### Prerequisites
 
-We are still actively learning and developing:
+- Python 3.8+ installed
+- PostgreSQL database (optional, can use SQLite for development)
 
-* 🧠 Rakai is focusing on **metadata management & sync service**
-* 🧠 Ken is focusing on **block storage & authentication**
+### Installation
 
-Final integration will happen when both sides are stable.
+1. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
----
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## 🤝 Credits
+3. Configure environment variables:
+   - Copy `.env.example` to `.env`
+   - Update the `DATABASE_URL` if needed
 
-* **Rakai Andaru Priandra**  
-* **Ken [last name if you want to add]**
+4. Run the service:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-Special thanks to our lecturers, GitHub Copilot (sometimes 😅), Claude AI, DeepSeek, ChatGPT (that's a lot of AI), YouTube tutorials,  
-and all the StackOverflow legends.
+## API Endpoints
+
+- `GET /health` - Health check
+- `POST /files` - Create file metadata
+- `GET /files` - List all files
+- `GET /files/{file_id}` - Get file metadata
+- `PUT /files/{file_id}` - Update file metadata
+- `DELETE /files/{file_id}` - Delete file
+- `POST /files/{file_id}/versions` - Create file version
+- `GET /files/{file_id}/versions` - List file versions
+- `POST /files/{file_id}/chunks` - Create file chunk
+- `GET /files/{file_id}/chunks` - List file chunks
+
+## Integration with other microservices
+
+This metadata service is part of a larger cloud file service platform, working alongside:
+
+- Block Storage Service - Handles actual file storage
+- Sync Service - Manages file synchronization
+- User Auth Service - Handles authentication and authorization
+
+The services communicate through RESTful APIs and can be orchestrated together using the root `docker-compose.yml` file.
