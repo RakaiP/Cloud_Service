@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  metadata-db:
+    image: postgres:13
+    volumes:
+      - metadata_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: metadata_user
+      POSTGRES_PASSWORD: metadata_password
+      POSTGRES_DB: metadata_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metadata_user -d metadata_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  metadata-service:
+    build:
+      context: ./backend/metadata-service      # ← look here for your Dockerfile
+      dockerfile: Dockerfile
+    depends_on:
+      metadata-db:
+        condition: service_healthy
+    env_file:
+      - ./backend/metadata-service/.env        # ← load your DATABASE_URL from here
+    ports:
+      - "8000:8000"
+    # you can omit volumes entirely if your Dockerfile COPYs your code
+    # or if you need live reload in dev, use:
+    # volumes:
+    #   - ./backend/metadata-service:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  metadata_data:
+

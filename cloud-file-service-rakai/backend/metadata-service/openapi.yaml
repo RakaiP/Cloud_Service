@@ -1,0 +1,277 @@
+openapi: 3.0.4
+info:
+  title: Metadata Service API
+  description: API for managing file metadata, chunks, and versioning in a cloud file sharing system.
+  version: 0.1.9
+
+servers:
+  - url: http://api.example.com/v1
+    description: Production server
+  - url: http://staging-api.example.com
+    description: Staging server for internal testing
+    
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  version:
+                    type: string
+
+  /files:
+    post:
+      summary: Register a new file metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileInput'
+      responses:
+        '201':
+          description: File registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+    get:
+      summary: List all files
+      parameters:
+        - name: skip
+          in: query
+          description: Number of records to skip
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: List of files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+
+  /files/{file_id}:
+    parameters:
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get metadata for a file
+      responses:
+        '200':
+          description: File metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+        '404':
+          description: File not found
+    put:
+      summary: Update file metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileInput'
+      responses:
+        '200':
+          description: File updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+        '404':
+          description: File not found
+    delete:
+      summary: Delete a file and all associated data
+      responses:
+        '204':
+          description: File deleted
+        '404':
+          description: File not found
+
+  /files/{file_id}/versions:
+    parameters:
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Create a new version of a file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionCreate'
+      responses:
+        '200':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileVersion'
+        '404':
+          description: File not found
+    get:
+      summary: List all versions of a file
+      responses:
+        '200':
+          description: List of versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileVersion'
+        '404':
+          description: File not found
+
+  /files/{file_id}/chunks:
+    parameters:
+      - name: file_id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Register a new chunk of a file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChunkCreate'
+      responses:
+        '200':
+          description: Chunk registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileChunk'
+        '404':
+          description: File not found
+    get:
+      summary: List all chunks of a file
+      responses:
+        '200':
+          description: List of chunks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileChunk'
+        '404':
+          description: File not found
+
+components:
+  schemas:
+    FileInput:
+      type: object
+      required: [filename]
+      properties:
+        filename:
+          type: string
+          description: Name of the file
+
+    File:
+      type: object
+      properties:
+        file_id:
+          type: string
+          description: Unique identifier for the file
+        filename:
+          type: string
+          description: Name of the file
+        created_at:
+          type: string
+          format: date-time
+          description: When the file was first registered
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the file was last updated
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileVersion'
+          description: List of file versions
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileChunk'
+          description: List of file chunks
+
+    FileVersion:
+      type: object
+      properties:
+        version_number:
+          type: integer
+          description: Sequential version number
+        created_at:
+          type: string
+          format: date-time
+          description: When this version was created
+
+    VersionCreate:
+      type: object
+      required: [file_id, storage_path]
+      properties:
+        file_id:
+          type: string
+          description: ID of the file this version belongs to
+        storage_path:
+          type: string
+          description: Path where the version is stored
+
+    FileChunk:
+      type: object
+      properties:
+        chunk_index:
+          type: integer
+          description: Index of this chunk in the file
+        storage_path:
+          type: string
+          description: Path where the chunk is stored
+        created_at:
+          type: string
+          format: date-time
+          description: When this chunk was created
+
+    ChunkCreate:
+      type: object
+      required: [file_id, chunk_index, storage_path]
+      properties:
+        file_id:
+          type: string
+          description: ID of the file this chunk belongs to
+        chunk_index:
+          type: integer
+          description: Index of this chunk in the file
+        storage_path:
+          type: string
+          description: Path where the chunk is stored
