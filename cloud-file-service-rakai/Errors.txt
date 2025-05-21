@@ -1,0 +1,97 @@
+
+ASUS@Rakai MINGW64 /c
+$ ^[[200~docker-compose -f docker-compose-test.yml build --no-cache
+bash: $'\E[200~docker-compose': command not found
+
+ASUS@Rakai MINGW64 /c
+$ docker-compose -f docker-compose-test.yml build --no-cache
+docker-compose -f docker-compose-test.yml up
+open C:\docker-compose-test.yml: The system cannot find the file specified.
+open C:\docker-compose-test.yml: The system cannot find the file specified.
+
+ASUS@Rakai MINGW64 /c
+$ # Navigate to project root
+cd "c:\Users\ASUS\Documents\UGM\Sem 4 (let's go)\Scalable\CloudService\cloud-file-service-rakai"
+
+# Run tests for both services
+docker-compose -f docker-compose-test.yml up
+
+# Run tests for a specific service
+docker-compose -f docker-compose-test.yml up metadata-service-test
+docker-compose -f docker-compose-test.yml up sync-service-test
+
+# To rebuild the images before testing (after code changes)
+docker-compose -f docker-compose-test.yml build
+docker-compose -f docker-compose-test.yml up
+time="2025-05-21T06:20:45+07:00" level=warning msg="C:\\Users\\ASUS\\Documents\\UGM\\Sem 4 (let's go)\\Scalable\\CloudService\\cloud-file-service-rakai\\docker-compose-test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+time="2025-05-21T06:20:45+07:00" level=warning msg="Found orphan containers ([cloud-file-service-rakai-sync-service-1 cloud-file-service-rakai-metadata-service-1 cloud-file-service-rakai-sync-db-1 cloud-file-service-rakai-metadata-db-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container cloud-file-service-rakai-sync-db-test-1  Created
+ Container cloud-file-service-rakai-metadata-db-test-1  Created
+ Container cloud-file-service-rakai-sync-service-test-1  Created
+ Container cloud-file-service-rakai-metadata-service-test-1  Created
+Attaching to metadata-db-test-1, metadata-service-test-1, sync-db-test-1, sync-service-test-1
+sync-db-test-1           |
+sync-db-test-1           | PostgreSQL Database directory appears to contain a database; Skipping initialization
+sync-db-test-1           |
+metadata-db-test-1       |
+metadata-db-test-1       | PostgreSQL Database directory appears to contain a database; Skipping initialization
+metadata-db-test-1       |
+metadata-db-test-1       | 2025-05-20 23:20:46.368 UTC [1] LOG:  starting PostgreSQL 13.21 (Debian 13.21-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+metadata-db-test-1       | 2025-05-20 23:20:46.369 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+metadata-db-test-1       | 2025-05-20 23:20:46.369 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+sync-db-test-1           | 2025-05-20 23:20:46.369 UTC [1] LOG:  starting PostgreSQL 13.21 (Debian 13.21-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
+sync-db-test-1           | 2025-05-20 23:20:46.369 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+sync-db-test-1           | 2025-05-20 23:20:46.369 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+sync-db-test-1           | 2025-05-20 23:20:46.377 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+metadata-db-test-1       | 2025-05-20 23:20:46.380 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+sync-db-test-1           | 2025-05-20 23:20:46.389 UTC [28] LOG:  database system was shut down at 2025-05-20 23:16:38 UTC
+metadata-db-test-1       | 2025-05-20 23:20:46.393 UTC [27] LOG:  database system was shut down at 2025-05-20 23:16:38 UTC
+sync-db-test-1           | 2025-05-20 23:20:46.400 UTC [1] LOG:  database system is ready to accept connections
+metadata-db-test-1       | 2025-05-20 23:20:46.404 UTC [1] LOG:  database system is ready to accept connections
+sync-service-test-1      | ============================= test session starts ==============================
+sync-service-test-1      | platform linux -- Python 3.10.17, pytest-7.4.0, pluggy-1.6.0 -- /usr/local/bin/python3.10
+sync-service-test-1      | cachedir: .pytest_cache
+sync-service-test-1      | rootdir: /app
+sync-service-test-1      | plugins: cov-6.1.1, anyio-4.9.0
+metadata-service-test-1  | ============================= test session starts ==============================
+metadata-service-test-1  | platform linux -- Python 3.11.12, pytest-8.3.5, pluggy-1.6.0 -- /usr/local/bin/python3.11
+metadata-service-test-1  | cachedir: .pytest_cache
+metadata-service-test-1  | rootdir: /app
+metadata-service-test-1  | plugins: cov-6.1.1, anyio-4.9.0
+sync-service-test-1      | collecting ... collected 2 items
+sync-service-test-1      |
+sync-service-test-1      | tests/test_api.py::test_root_endpoint PASSED                             [ 50%]
+sync-service-test-1      | tests/test_api.py::test_create_sync_event PASSED                         [100%]
+sync-service-test-1      |
+sync-service-test-1      | =============================== warnings summary ===============================
+sync-service-test-1      | app/database.py:16
+sync-service-test-1      |   /app/app/database.py:16: MovedIn20Warning: Deprecated API features detected! These feature(s) are not compatible with SQLAlchemy 2.0. To prevent incompatible upgrades prior to updating applications, ensure requirements files are pinned to "sqlalchemy<2.0". Set environment variable SQLALCHEMY_WARN_20=1 to show all deprecation warnings.  Set environment variable SQLALCHEMY_SILENCE_UBER_WARNING=1 to silence this message. (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+sync-service-test-1      |     Base = declarative_base()
+sync-service-test-1      |
+sync-service-test-1      | ../usr/local/lib/python3.10/site-packages/pydantic/_internal/_config.py:210
+sync-service-test-1      |   /usr/local/lib/python3.10/site-packages/pydantic/_internal/_config.py:210: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.0.3/migration/
+sync-service-test-1      |     warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+sync-service-test-1      |
+sync-service-test-1      | -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+sync-service-test-1      | ======================== 2 passed, 2 warnings in 1.88s =========================
+metadata-service-test-1  | collecting ... collected 0 items / 1 error
+metadata-service-test-1  |
+metadata-service-test-1  | ==================================== ERRORS ====================================
+metadata-service-test-1  | ______________________ ERROR collecting tests/test_api.py ______________________
+metadata-service-test-1  | tests/test_api.py:32: in <module>
+metadata-service-test-1  |     client = TestClient(app)
+metadata-service-test-1  | /usr/local/lib/python3.11/site-packages/starlette/testclient.py:399: in __init__
+metadata-service-test-1  |     super().__init__(
+metadata-service-test-1  | E   TypeError: Client.__init__() got an unexpected keyword argument 'app'
+metadata-service-test-1  | =============================== warnings summary ===============================
+metadata-service-test-1  | ../usr/local/lib/python3.11/site-packages/pydantic/_internal/_config.py:210
+metadata-service-test-1  |   /usr/local/lib/python3.11/site-packages/pydantic/_internal/_config.py:210: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.0.3/migration/
+metadata-service-test-1  |     warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+metadata-service-test-1  |
+metadata-service-test-1  | -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+metadata-service-test-1  | =========================== short test summary info ============================
+metadata-service-test-1  | ERROR tests/test_api.py - TypeError: Client.__init__() got an unexpected keyw...
+metadata-service-test-1  | !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+metadata-service-test-1  | ========================= 1 warning, 1 error in 1.85s ==========================
+sync-service-test-1 exited with code 0
+metadata-service-test-1 exited with code 2

@@ -1,0 +1,43 @@
+openapi: 3.0.4
+info:
+  title: Synchronization Service API
+  version: 1.0.0
+tags:
+  - name: Sync
+paths:
+  /sync-events:
+    post:
+      summary: Submit a sync event
+      tags: [Sync]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncEventInput'
+      responses:
+        '200':
+          description: Event received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncEventResponse'
+
+components:
+  schemas:
+    SyncEventInput:
+      type: object
+      required: [file_id, event_type]
+      properties:
+        file_id:
+          type: string
+        event_type:
+          type: string
+          enum: [upload, delete, update]
+    SyncEventResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        event_id:
+          type: string

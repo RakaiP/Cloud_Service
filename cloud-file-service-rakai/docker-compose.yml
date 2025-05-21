@@ -15,15 +15,29 @@ services:
       timeout: 5s
       retries: 5
 
+  sync-db:
+    image: postgres:13
+    volumes:
+      - sync_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: sync_user
+      POSTGRES_PASSWORD: sync_password
+      POSTGRES_DB: sync_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sync_user -d sync_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   metadata-service:
     build:
-      context: ./backend/metadata-service      # ← look here for your Dockerfile
+      context: ./backend/metadata-service
       dockerfile: Dockerfile
     depends_on:
       metadata-db:
         condition: service_healthy
     env_file:
-      - ./backend/metadata-service/.env        # ← load your DATABASE_URL from here
+      - ./backend/metadata-service/.env
     ports:
       - "8000:8000"
     # you can omit volumes entirely if your Dockerfile COPYs your code
@@ -32,6 +46,24 @@ services:
     #   - ./backend/metadata-service:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
+  sync-service:
+    build:
+      context: ./backend/sync-service
+      dockerfile: Dockerfile
+    depends_on:
+      sync-db:
+        condition: service_healthy
+    env_file:
+      - ./backend/sync-service/.env
+    ports:
+      - "8001:8000"  # Map to a different host port to avoid conflicts
+    # Uncomment for development with live reload:
+    # volumes:
+    #   - ./backend/sync-service:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - DATABASE_URL=postgresql://sync_user:sync_password@sync-db:5432/sync_db
+
 volumes:
   metadata_data:
-
+  sync_data:

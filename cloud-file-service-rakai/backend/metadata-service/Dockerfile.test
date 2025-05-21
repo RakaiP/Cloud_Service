@@ -1,0 +1,16 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install dependencies and test tools
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir pytest pytest-cov pytest-timeout
+
+# Copy the application code and tests
+COPY . .
+
+# Run tests with a timeout to prevent hanging
+CMD ["python", "-m", "pytest", "tests/", "-v", "--timeout=10"]

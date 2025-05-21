@@ -1,0 +1,17 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy requirements first
+COPY requirements.txt .
+
+# Install dependencies with fixed SQLAlchemy version
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir pytest pytest-cov httpx && \
+    pip install --no-cache-dir sqlalchemy==1.4.49
+
+# Copy the application code and tests
+COPY . .
+
+# Run tests when the container starts
+CMD ["pytest", "tests/", "-v"]
