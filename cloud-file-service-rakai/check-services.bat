@@ -1,24 +1,20 @@
 @echo off
 echo ===== CHECKING SERVICE STATUS =====
 
-echo 1. Checking PostgreSQL containers...
-docker ps --filter "name=metadata-db" --filter "name=sync-db" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+echo Checking all services...
+docker-compose ps
 
 echo.
-echo 2. Testing Metadata Service (port 8000)...
-curl -s http://localhost:8000/health || echo ERROR: Metadata service not responding
+echo Testing endpoints...
+curl -s http://localhost:8000/health || echo ERROR: Metadata service down
+curl -s http://localhost:8001/ || echo ERROR: Sync service down  
+curl -s http://localhost:8003/health || echo ERROR: Block storage down
+curl -s http://localhost:9000/minio/health/live || echo ERROR: MinIO down
 
 echo.
-echo 3. Testing Sync Service (port 8001)...
-curl -s http://localhost:8001/ || echo ERROR: Sync service not responding
-
-echo.
-echo 4. Checking running processes...
-tasklist /FI "IMAGENAME eq python.exe" /FO TABLE 2>nul | findstr "python.exe" || echo No Python processes found
-
-echo.
-echo ===== QUICK ACCESS LINKS =====
+echo ===== ACCESS LINKS =====
 echo Metadata API: http://localhost:8000/docs
 echo Sync API: http://localhost:8001/docs
-echo Health Check: http://localhost:8000/health
+echo Block Storage API: http://localhost:8003/docs
+echo MinIO Console: http://localhost:9001
 pause

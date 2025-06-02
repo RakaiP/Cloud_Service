@@ -1,3 +1,5 @@
+# This file can be deleted - it contains old error logs that are no longer relevant
+# The services now use MinIO for chunk storage instead of local filesystem
 
 ASUS@Rakai MINGW64 /c
 $ ^[[200~docker-compose -f docker-compose-test.yml build --no-cache
