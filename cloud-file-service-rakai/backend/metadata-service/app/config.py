@@ -12,10 +12,16 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api/v1"
     APP_NAME: str = "Metadata Service"
     APP_VERSION: str = "0.1.9"
+    
+    # Auth0 settings
+    AUTH0_DOMAIN: str = os.getenv("AUTH0_DOMAIN", "")
+    API_AUDIENCE: str = os.getenv("API_AUDIENCE", "")
+    ALGORITHMS: str = os.getenv("ALGORITHMS", "RS256")
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        case_sensitive = True
 
 # Create settings instance
 @lru_cache()

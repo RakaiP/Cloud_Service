@@ -8,3 +8,5 @@ httpx==0.24.1
 alembic==1.11.1
 psycopg2-binary==2.9.6
 pydantic-settings==2.0.1
+python-jose[cryptography]==3.3.0
+requests==2.30.0

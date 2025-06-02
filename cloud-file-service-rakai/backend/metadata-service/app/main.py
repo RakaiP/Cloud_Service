@@ -7,6 +7,7 @@ from typing import List
 from . import models, schemas, crud
 from .database import engine, get_db
 from .config import settings
+from .auth import get_current_user  # Import auth dependency
 
 # Create tables in the database
 models.Base.metadata.create_all(bind=engine)
@@ -30,13 +31,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoint
+# Health check endpoint - public, no auth required
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "version": settings.APP_VERSION}
 
-# File endpoints
-@app.post("/files", response_model=schemas.File, status_code=status.HTTP_201_CREATED)
+@app.get("/")
+async def root():
+    return {"status": "Metadata Service is running", "service": "metadata-service"}
+
+# File endpoints - protected
+@app.post("/files", response_model=schemas.File, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
 def create_file(file: schemas.FileInput, db: Session = Depends(get_db)):
     """
     Create a new file metadata entry
@@ -44,7 +49,7 @@ def create_file(file: schemas.FileInput, db: Session = Depends(get_db)):
     return crud.create_file(db=db, file=file)
 
 
-@app.get("/files/{file_id}", response_model=schemas.File)
+@app.get("/files/{file_id}", response_model=schemas.File, dependencies=[Depends(get_current_user)])
 def read_file(file_id: str, db: Session = Depends(get_db)):
     """
     Get file metadata by file_id
@@ -55,7 +60,7 @@ def read_file(file_id: str, db: Session = Depends(get_db)):
     return db_file
 
 
-@app.get("/files", response_model=List[schemas.File])
+@app.get("/files", response_model=List[schemas.File], dependencies=[Depends(get_current_user)])
 def read_files(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     Get list of files with pagination
@@ -64,7 +69,7 @@ def read_files(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return files
 
 
-@app.put("/files/{file_id}", response_model=schemas.File)
+@app.put("/files/{file_id}", response_model=schemas.File, dependencies=[Depends(get_current_user)])
 def update_file(file_id: str, file: schemas.FileInput, db: Session = Depends(get_db)):
     """
     Update file metadata
@@ -75,7 +80,7 @@ def update_file(file_id: str, file: schemas.FileInput, db: Session = Depends(get
     return db_file
 
 
-@app.delete("/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(get_current_user)])
 def delete_file(file_id: str, db: Session = Depends(get_db)):
     """
     Delete a file by ID
@@ -86,8 +91,8 @@ def delete_file(file_id: str, db: Session = Depends(get_db)):
     return JSONResponse(status_code=204, content={})
 
 
-# Version endpoints
-@app.post("/files/{file_id}/versions", response_model=schemas.FileVersion)
+# Version endpoints - protected
+@app.post("/files/{file_id}/versions", response_model=schemas.FileVersion, dependencies=[Depends(get_current_user)])
 def create_version(file_id: str, version: schemas.VersionCreate, db: Session = Depends(get_db)):
     """
     Create a new version for a file
@@ -101,7 +106,7 @@ def create_version(file_id: str, version: schemas.VersionCreate, db: Session = D
     return crud.create_file_version(db=db, version=version)
 
 
-@app.get("/files/{file_id}/versions", response_model=List[schemas.FileVersion])
+@app.get("/files/{file_id}/versions", response_model=List[schemas.FileVersion], dependencies=[Depends(get_current_user)])
 def read_versions(file_id: str, db: Session = Depends(get_db)):
     """
     Get all versions of a file
@@ -116,8 +121,8 @@ def read_versions(file_id: str, db: Session = Depends(get_db)):
     return versions
 
 
-# Chunk endpoints
-@app.post("/files/{file_id}/chunks", response_model=schemas.FileChunk)
+# Chunk endpoints - protected
+@app.post("/files/{file_id}/chunks", response_model=schemas.FileChunk, dependencies=[Depends(get_current_user)])
 def create_chunk(file_id: str, chunk: schemas.ChunkCreate, db: Session = Depends(get_db)):
     """
     Create a new chunk for a file
@@ -131,7 +136,7 @@ def create_chunk(file_id: str, chunk: schemas.ChunkCreate, db: Session = Depends
     return crud.create_file_chunk(db=db, chunk=chunk)
 
 
-@app.get("/files/{file_id}/chunks", response_model=List[schemas.FileChunk])
+@app.get("/files/{file_id}/chunks", response_model=List[schemas.FileChunk], dependencies=[Depends(get_current_user)])
 def read_chunks(file_id: str, db: Session = Depends(get_db)):
     """
     Get all chunks of a file

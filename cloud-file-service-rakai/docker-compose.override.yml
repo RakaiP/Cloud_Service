@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  metadata-service:
+    volumes:
+      - ./backend/metadata-service:/app
+  
+  sync-service:
+    volumes:
+      - ./backend/sync-service:/app

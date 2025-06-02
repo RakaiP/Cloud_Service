@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: Cloud File Service API
+  description: API specification for the Cloud File Service that the client SDK interacts with
+  version: 0.1.0
+servers:
+  - url: http://localhost:8000
+    description: Metadata Service
+  - url: http://localhost:8001
+    description: Sync Service
+
+paths:
+  # Metadata Service Endpoints
+  /files:
+    get:
+      summary: List files
+      description: Get a list of all files
+      parameters:
+        - name: skip
+          in: query
+          description: Number of records to skip
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: List of files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+    post:
+      summary: Create file
+      description: Create a new file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileInput'
+      responses:
+        '201':
+          description: Created file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+  
+  /files/{file_id}:
+    get:
+      summary: Get file
+      description: Get details of a specific file
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+    put:
+      summary: Update file
+      description: Update file metadata
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileInput'
+      responses:
+        '200':
+          description: Updated file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+    delete:
+      summary: Delete file
+      description: Delete a file
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: File deleted
+  
+  # Sync Service Endpoints
+  /sync-events:
+    get:
+      summary: List sync events
+      description: Get a list of sync events
+      parameters:
+        - name: skip
+          in: query
+          description: Number of records to skip
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 100
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed]
+      responses:
+        '200':
+          description: List of sync events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SyncEvent'
+    post:
+      summary: Create sync event
+      description: Create a new sync event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncEventInput'
+      responses:
+        '200':
+          description: Created sync event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncEventResponse'
+  
+  /sync-events/{event_id}:
+    get:
+      summary: Get sync event
+      description: Get details of a specific sync event
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sync event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncEvent'
+
+components:
+  schemas:
+    FileInput:
+      type: object
+      required:
+        - filename
+      properties:
+        filename:
+          type: string
+          description: Name of the file
+    
+    File:
+      type: object
+      properties:
+        file_id:
+          type: string
+          description: Unique identifier for the file
+        filename:
+          type: string
+          description: Name of the file
+        created_at:
+          type: string
+          format: date-time
+          description: When the file was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the file was last updated
+    
+    SyncEventInput:
+      type: object
+      required:
+        - file_id
+        - event_type
+      properties:
+        file_id:
+          type: string
+          description: ID of the file to sync
+        event_type:
+          type: string
+          enum: [upload, delete, update]
+          description: Type of sync event
+    
+    SyncEventResponse:
+      type: object
+      properties:
+        event_id:
+          type: string
+          description: ID of the created sync event
+        message:
+          type: string
+          description: Status message
+    
+    SyncEvent:
+      type: object
+      properties:
+        event_id:
+          type: string
+          description: Unique identifier for the sync event
+        file_id:
+          type: string
+          description: ID of the file associated with this event
+        event_type:
+          type: string
+          enum: [upload, delete, update]
+          description: Type of sync event
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Status of the sync event
+        created_at:
+          type: string
+          format: date-time
+          description: When the event was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the event was last updated
+        error_message:
+          type: string
+          description: Error message if the event failed
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

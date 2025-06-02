@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     # Service settings
     SYNC_EVENT_PROCESS_INTERVAL: int = 5  # Process events every 5 seconds
     
+    # Auth0 settings
+    AUTH0_DOMAIN: str = ""
+    API_AUDIENCE: str = ""
+    ALGORITHMS: str = "RS256"
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

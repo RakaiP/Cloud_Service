@@ -5,24 +5,22 @@ WORKDIR /app
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONUNBUFFERED=1
 
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
+        gcc \
+        python3-dev \
         libpq-dev \
-        postgresql-client \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy the application
 COPY . .
 
 # Expose port

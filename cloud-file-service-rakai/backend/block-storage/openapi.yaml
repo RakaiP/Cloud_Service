@@ -1,0 +1,80 @@
+openapi: 3.0.4
+info:
+  title: Block Storage Service API
+  version: 1.0.0
+  description: API for storing, retrieving, and deleting file chunks.
+
+servers:
+  - url: http://localhost:8003
+    description: Local development server
+
+paths:
+  /chunks:
+    post:
+      summary: Upload a file chunk
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file_id:
+                  type: string
+                  description: ID of the file this chunk belongs to
+                chunk_index:
+                  type: integer
+                  description: Index of the chunk within the file
+                file:
+                  type: string
+                  format: binary
+                  description: The chunk file content
+      responses:
+        '201':
+          description: Chunk uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  chunk_id:
+                    type: string
+                  storage_path:
+                    type: string
+
+  /chunks/{chunk_id}:
+    get:
+      summary: Download a file chunk by ID
+      parameters:
+        - name: chunk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chunk binary data
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Chunk not found
+
+    delete:
+      summary: Delete a chunk by ID
+      parameters:
+        - name: chunk_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Chunk deleted
+        '404':
+          description: Chunk not found
+
+components:
+  schemas: {}

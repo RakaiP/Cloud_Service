@@ -6,6 +6,7 @@ from typing import List
 from app import crud, models, schemas
 from app.database import engine, get_db
 from app.config import get_settings
+from app.auth import get_current_user  # Import auth dependency
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -73,7 +74,7 @@ def process_sync_event(event_id: str):
         db.close()
 
 
-@app.post("/sync-events", response_model=schemas.SyncEventResponse, tags=["Sync"])
+@app.post("/sync-events", response_model=schemas.SyncEventResponse, tags=["Sync"], dependencies=[Depends(get_current_user)])
 async def create_sync_event(
     sync_event: schemas.SyncEventInput,
     background_tasks: BackgroundTasks,
@@ -97,7 +98,7 @@ async def create_sync_event(
     )
 
 
-@app.get("/sync-events", response_model=List[schemas.SyncEventDB], tags=["Sync"])
+@app.get("/sync-events", response_model=List[schemas.SyncEventDB], tags=["Sync"], dependencies=[Depends(get_current_user)])
 async def get_sync_events(
     skip: int = 0,
     limit: int = 100,
@@ -111,7 +112,7 @@ async def get_sync_events(
     return events
 
 
-@app.get("/sync-events/{event_id}", response_model=schemas.SyncEventDB, tags=["Sync"])
+@app.get("/sync-events/{event_id}", response_model=schemas.SyncEventDB, tags=["Sync"], dependencies=[Depends(get_current_user)])
 async def get_sync_event(event_id: str, db: Session = Depends(get_db)):
     """
     Get details of a specific sync event by ID.
@@ -131,6 +132,15 @@ async def root():
         "title": settings.API_TITLE,
         "version": settings.API_VERSION,
         "description": settings.API_DESCRIPTION
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy", 
+        "service": "sync-service",
+        "version": settings.API_VERSION
     }
 
 
