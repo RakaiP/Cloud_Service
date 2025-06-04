@@ -91,3 +91,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# This script demonstrates how to use the Cloud File Service Client SDK.
+from client_sdk.uploader import upload_file
+from client_sdk.downloader import download_file
+
+upload_file("bigfile.zip", "http://server.com/upload", chunk_size=1024*1024)
+download_file("http://server.com/download", num_chunks=10, output_path="restored.zip")
+# This script uploads a file in chunks and downloads it back, demonstrating the chunking functionality.
