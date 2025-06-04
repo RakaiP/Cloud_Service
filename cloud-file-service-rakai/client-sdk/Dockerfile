@@ -1,20 +1,24 @@
-FROM python:3.9-slim
+# Use an official Node.js image as the base
+FROM node:14
 
+# Set the working directory to /app
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY setup.py .
-COPY cloudservice ./cloudservice
+# Copy the package*.json files to the working directory
+COPY package*.json ./
+COPY tsconfig.json ./
 
-# Install the SDK in development mode
-RUN pip install -e .
+# Install the dependencies
+RUN npm install
 
-# Install additional tools for testing
-RUN pip install pytest httpx
+# Copy the application code to the working directory
+COPY . .
 
-# Copy example files
-COPY example.py .
-COPY README.md .
+# Build the client-sdk
+RUN npm run build
 
-# Command to run the example
-CMD ["python", "example.py"]
+# Expose the port
+EXPOSE 8080
+
+# Run the command to start the development server
+CMD ["npm", "start"]
