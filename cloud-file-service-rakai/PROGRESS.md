@@ -1,57 +1,74 @@
-# Cloud File Sharing System - Progress Update
+# Cloud File Service (Google Drive Clone) - Progress Report
 
 ## ✅ Completed Components
 
-### 1. Block Storage Service with MinIO ✅
-- FastAPI service storing chunks in MinIO (S3-compatible)
-- Endpoints: POST/GET/DELETE/LIST chunks
-- Health checks and error handling
-- Docker integration working
-- **Status: TESTED AND WORKING** 🎉
+### 1. Block Storage Service
+- FastAPI microservice for chunk storage
+- MinIO integration for S3-compatible object storage
+- Endpoints for chunk upload, download, delete, and listing
+- Dockerized and health-checked
 
-### 2. Docker Infrastructure ✅
-- All services containerized and running
-- MinIO console accessible at localhost:9001
-- Service orchestration with docker-compose
+### 2. Metadata Service
+- FastAPI microservice for file metadata, versioning, and chunk tracking
+- PostgreSQL integration for persistent metadata storage
+- Endpoints for file CRUD, versioning, and chunk registration
+- Auth0 JWT authentication enforced on protected endpoints
+- Dockerized and health-checked
+
+### 3. Sync Service
+- FastAPI microservice for file sync events
+- PostgreSQL integration for sync event persistence
+- Endpoints for creating and listing sync events
+- Auth0 JWT authentication
+- Dockerized and health-checked
+
+### 4. Frontend
+- Nginx static frontend with file upload UI
+- JS client supports chunked uploads to block storage
+- Dockerized and integrated with backend services
+
+### 5. Chunker (Client Agent)
+- Service for client-side file chunking and upload orchestration
+- Communicates with metadata, block storage, and sync services
+- Dockerized
+
+### 6. Infrastructure
+- Docker Compose orchestrates all services and databases
+- MinIO for object storage, two PostgreSQL databases
 - Health checks for all services
 
-### 3. Database Services ✅
-- PostgreSQL for metadata-service
-- PostgreSQL for sync-service
-- Both databases healthy and accessible
+## 🟡 In Progress / Next Steps
 
-## 🚧 Next Priority Tasks
+- [ ] Device management endpoints in sync service (register/list devices)
+- [ ] Sync queue per device (pending syncs, completion tracking)
+- [ ] Real-time sync (WebSocket endpoints in sync service)
+- [ ] Integration webhooks between metadata and sync services
+- [ ] Enhanced event data (file metadata in sync events)
+- [ ] Client SDK improvements (auto device registration, polling, notifications)
 
-### 1. **Integrate Services** (HIGH PRIORITY)
-- [ ] Connect metadata-service to block-storage
-- [ ] File chunking logic in metadata-service
-- [ ] Register chunk metadata when uploading
+## 📝 Testing & Validation
 
-### 2. **Client SDK Development** (HIGH PRIORITY)
-- [ ] Python SDK for file upload/download
-- [ ] File chunking algorithm (split large files)
-- [ ] File reconstruction (reassemble chunks)
-- [ ] Progress tracking for uploads
+- All core endpoints tested via cURL and integration scripts
+- Auth0 authentication verified (403 on protected endpoints without token)
+- End-to-end file upload and download flow works with valid token
+- Docker Compose test suite for CI
 
-### 3. **API Integration** (MEDIUM PRIORITY)
-- [ ] Metadata service calls block-storage for chunks
-- [ ] Sync service integration for file events
-- [ ] End-to-end file upload/download flow
+## 🚀 Architecture Overview
 
-### 4. **Authentication** (LOWER PRIORITY)
-- [ ] Test Auth0 integration
-- [ ] Secure all endpoints
-- [ ] User-specific file access
+- **Frontend**: Nginx static UI (port 80)
+- **Chunker**: Client agent for chunking/upload (port 8080)
+- **Metadata Service**: File metadata/versioning (port 8000)
+- **Sync Service**: File sync events (port 8001)
+- **Block Storage**: Chunk storage via MinIO (port 8003)
+- **MinIO**: S3-compatible object storage (ports 9000/9001)
+- **PostgreSQL**: Metadata and sync databases
 
-## 🎯 Immediate Next Step
+## 🟢 Current Status
 
-**Build File Upload Flow:**
-1. Client chunks a file
-2. Uploads chunks to block-storage (✅ DONE)
-3. Registers file metadata with metadata-service
-4. Triggers sync event
+- Core microservices are running and integrated
+- Auth, storage, and metadata flows are functional
+- Ready for advanced sync and device management features
 
-Would you like to work on:
-- **A) Client SDK** for file chunking and upload?
-- **B) Metadata service** integration with block-storage?
-- **C) Complete end-to-end** upload/download flow?
+---
+
+**Next milestone:** Implement device management and real-time sync in the sync service, then polish client SDK for production use.

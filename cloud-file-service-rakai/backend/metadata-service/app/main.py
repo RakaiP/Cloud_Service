@@ -3,14 +3,30 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
+import logging
 
 from . import models, schemas, crud
 from .database import engine, get_db
 from .config import settings
 from .auth import get_current_user  # Import auth dependency
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def create_tables():
+    """Create database tables"""
+    try:
+        logger.info("Creating database tables...")
+        models.Base.metadata.drop_all(bind=engine)  # Drop existing tables
+        models.Base.metadata.create_all(bind=engine)  # Create fresh tables
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {e}")
+        raise
+
 # Create tables in the database
-models.Base.metadata.create_all(bind=engine)
+create_tables()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -42,11 +58,21 @@ async def root():
 
 # File endpoints - protected
 @app.post("/files", response_model=schemas.File, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])
-def create_file(file: schemas.FileInput, db: Session = Depends(get_db)):
+def create_file(file: schemas.FileInput, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """
     Create a new file metadata entry
     """
-    return crud.create_file(db=db, file=file)
+    try:
+        logger.info(f"Creating file: {file.filename} for user: {current_user.get('sub', 'unknown')}")
+        result = crud.create_file(db=db, file=file)
+        logger.info(f"File created successfully with ID: {result.file_id}")
+        return result
+    except Exception as e:
+        logger.error(f"Error creating file: {e}")
+        logger.error(f"Error type: {type(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to create file: {str(e)}")
 
 
 @app.get("/files/{file_id}", response_model=schemas.File, dependencies=[Depends(get_current_user)])

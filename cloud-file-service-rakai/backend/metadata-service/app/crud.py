@@ -6,7 +6,7 @@ def get_file(db: Session, file_id: str):
     """
     Get a file by ID
     """
-    return db.query(models.File).filter(models.File.id == file_id).first()
+    return db.query(models.File).filter(models.File.file_id == file_id).first()
 
 
 def get_files(db: Session, skip: int = 0, limit: int = 100):
@@ -21,7 +21,7 @@ def create_file(db: Session, file: schemas.FileInput):
     Create a new file record
     """
     file_id = str(uuid.uuid4())
-    db_file = models.File(id=file_id, filename=file.filename)
+    db_file = models.File(file_id=file_id, filename=file.filename)
     db.add(db_file)
     db.commit()
     db.refresh(db_file)

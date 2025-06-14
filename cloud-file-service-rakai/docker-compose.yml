@@ -82,7 +82,7 @@ services:
     volumes:
       - ./backend/sync-service:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -95,12 +95,14 @@ services:
     depends_on:
       - minio
     environment:
-      
       - PYTHONPATH=/app
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
       - MINIO_BUCKET=chunks
+      - AUTH0_DOMAIN=dev-mc721bw3z72t3xex.us.auth0.com
+      - API_AUDIENCE=https://cloud-api.rakai/
+      - ALGORITHMS=RS256
       - CORS_ORIGINS=["http://localhost:80"]
     ports:
       - "8003:8000"
@@ -125,45 +127,52 @@ services:
     profiles:
       - test
   frontend:
-    build:
-      context: ./Frontend
-      dockerfile: Dockerfile
+    image: nginx:alpine
     ports:
       - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - metadata-service
-      - sync-service
       - block-storage
-    volumes:
-      - ./Frontend:/usr/share/nginx/html
+      - chunker-service
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
-  
-  client-sdk:
+
+  chunker-service:
     build:
-      context: ./client-sdk
+      context: ./backend/chunker-service
       dockerfile: Dockerfile
     environment:
       - AUTH0_DOMAIN=dev-mc721bw3z72t3xex.us.auth0.com
       - API_AUDIENCE=https://cloud-api.rakai/
+      - ALGORITHMS=RS256
+      - METADATA_SERVICE_URL=http://metadata-service:8000
+      - BLOCK_STORAGE_SERVICE_URL=http://block-storage:8000
+      - INDEXER_SERVICE_URL=http://indexer-service:8004
+      - DEFAULT_CHUNK_SIZE=1048576
+      - MAX_FILE_SIZE=1073741824
     volumes:
-      - ./client-sdk:/app
+      - ./backend/chunker-service:/app
     depends_on:
       - metadata-service
-      - sync-service
       - block-storage
     ports:
-      - "8080:8080"
+      - "8002:8002"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-     
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
 volumes:
   metadata_data:
   sync_data:
   minio_data:
+  chunker_watch:

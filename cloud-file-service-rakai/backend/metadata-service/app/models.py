@@ -8,7 +8,8 @@ class File(Base):
     """SQLAlchemy model for file metadata"""
     __tablename__ = "files"
 
-    id = Column(String, primary_key=True, index=True)
+    # Use 'file_id' instead of 'id' to match the schema expectations
+    file_id = Column(String, primary_key=True, index=True)
     filename = Column(String, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -23,7 +24,7 @@ class FileVersion(Base):
     __tablename__ = "file_versions"
 
     id = Column(Integer, primary_key=True, index=True)
-    file_id = Column(String, ForeignKey("files.id", ondelete="CASCADE"))
+    file_id = Column(String, ForeignKey("files.file_id", ondelete="CASCADE"))
     version_number = Column(Integer)
     storage_path = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -36,7 +37,7 @@ class FileChunk(Base):
     __tablename__ = "file_chunks"
 
     id = Column(Integer, primary_key=True, index=True)
-    file_id = Column(String, ForeignKey("files.id", ondelete="CASCADE"))
+    file_id = Column(String, ForeignKey("files.file_id", ondelete="CASCADE"))
     chunk_index = Column(Integer)
     storage_path = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

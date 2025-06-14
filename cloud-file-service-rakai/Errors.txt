@@ -97,3 +97,43 @@ metadata-service-test-1  | !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during coll
 metadata-service-test-1  | ========================= 1 warning, 1 error in 1.85s ==========================
 sync-service-test-1 exited with code 0
 metadata-service-test-1 exited with code 2
+
+# ===== ARCHITECTURE CLARIFICATION & CLEANUP =====
+#
+# 🎯 FINAL SERVICE NAMING & PURPOSES:
+#
+# CLIENT-SIDE AGENT (Rename from client-sdk):
+# NEW NAME OPTIONS:
+# - chunker ✅ (describes main function)
+# - file-agent ✅ (describes role)
+# - sync-agent ✅ (describes purpose)
+# - mutation-agent (technical)
+#
+# RECOMMENDED: "chunker" - simple and clear
+#
+# 🧹 CLEANUP NEEDED:
+#
+# ❌ REMOVE UNNECESSARY COMPONENTS:
+# 1. API Gateway - NOT needed for microservices
+#    - Services communicate directly via HTTP
+#    - Frontend calls services directly
+#    - No single entry point needed
+#
+# 2. Node modules outside frontend - NOT needed
+#    - Only frontend needs Node.js dependencies
+#    - Backend services use Python/Go
+#    - Keep dependencies local to each service
+#
+# ✅ CORRECT MICROSERVICES PATTERN:
+# Frontend (nginx) → Direct calls → Individual services
+# Chunker (client agent) → Direct calls → Individual services
+# Services communicate peer-to-peer when needed
+#
+# 🎯 FINAL ARCHITECTURE:
+# - frontend (port 80) - Web UI (nginx + static files)
+# - chunker (port 8080) - Client-side file processing agent
+# - metadata-service (port 8000) - File metadata tracking
+# - sync-service (port 8001) - Synchronization events
+# - block-storage (port 8003) - Chunk storage via MinIO
+# - minio (ports 9000/9001) - Object storage backend
+# - 2x PostgreSQL databases - Metadata persistence
