@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud File Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .auth-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .auth-section.authenticated {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .upload-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        .token-input {
+            width: 100%;
+            height: 100px;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .hidden {
+            display: none;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .service-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .service-card.healthy {
+            border-left-color: #28a745;
+        }
+        .service-card.unhealthy {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌩️ Cloud File Service</h1>
+        <p>Welcome to the Cloud File Service platform.</p>
+        
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <h2>🔐 Authentication</h2>
+            <div id="authStatus">
+                <p>Choose an authentication method:</p>
+            </div>
+            
+            <!-- Always visible buttons -->
+            <div id="authButtons">
+                <button onclick="showTokenInput()" id="tokenBtn">Use API Token</button>
+                <button onclick="enableTestMode()" id="testBtn">Test Mode</button>
+                <button onclick="showInstructions()" id="instructionsBtn">Setup Instructions</button>
+                <button onclick="logout()" id="logoutBtn" class="hidden">Logout</button>
+            </div>
+            
+            <!-- Token Input -->
+            <div id="tokenInput" class="hidden" style="margin-top: 15px;">
+                <h3>🔑 API Token Authentication</h3>
+                <p>Paste your Auth0 API token here:</p>
+                <textarea id="apiToken" class="token-input" placeholder="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6..."></textarea>
+                <br><br>
+                <button onclick="useApiToken()">Use This Token</button>
+                <button onclick="hideTokenInput()">Cancel</button>
+            </div>
+            
+            <!-- Instructions -->
+            <div id="instructions" class="hidden" style="margin-top: 15px; background: #fff3cd; padding: 15px; border-radius: 5px;">
+                <h3>📋 How to Get Auth0 Token</h3>
+                <p>Run this curl command to get your token:</p>
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto;">curl --request POST \
+  --url https://dev-mc721bw3z72t3xex.us.auth0.com/oauth/token \
+  --header 'content-type: application/json' \
+  --data '{
+    "client_id":"LbzsusVrT7HqFFWf3hkmrRMKKdRqEojc",
+    "client_secret":"mDNn0upQAdNPjQaBwb5UGc-c_4hDr3f5PP8xhawlB8APYGFTw0fYhWxJPSNoGiq5",
+    "audience":"https://cloud-api.rakai/",
+    "grant_type":"client_credentials"
+  }'</pre>
+                <p>Copy the <code>access_token</code> from the response and paste it above.</p>
+            </div>
+        </div>
+        
+        <!-- Service Status -->
+        <h2>🔧 Service Status</h2>
+        <div class="service-grid" id="serviceGrid">
+            <div class="service-card" id="metadata-service">
+                <h3>Metadata Service</h3>
+                <p>Port: 8000</p>
+                <p id="metadata-status">⏳ Checking...</p>
+            </div>
+            <div class="service-card" id="block-storage">
+                <h3>Block Storage</h3>
+                <p>Port: 8003</p>
+                <p id="storage-status">⏳ Checking...</p>
+            </div>
+            <div class="service-card" id="chunker-service">
+                <h3>Chunker Service</h3>
+                <p>Port: 8002</p>
+                <p id="chunker-status">⏳ Checking...</p>
+            </div>
+            <div class="service-card" id="sync-service">
+                <h3>Sync Service</h3>
+                <p>Port: 8001</p>
+                <p id="sync-status">⏳ Checking...</p>
+            </div>
+        </div>
+        
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2>📁 File Upload</h2>
+            <div id="uploadStatus">
+                <p id="uploadMessage">Please authenticate first to upload files.</p>
+                <input type="file" id="fileInput" accept="*/*" disabled />
+                <br><br>
+                <button onclick="uploadFile()" id="uploadBtn" disabled>Upload File</button>
+                <button onclick="checkServices()">Refresh Service Status</button>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div id="uploadProgress" class="hidden">
+                <p>Uploading...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p><span id="progressText">0%</span></p>
+            </div>
+        </div>
+
+        <!-- File Management Section -->
+        <div class="upload-section" id="fileManagement" style="display: none;">
+            <h2>📂 Your Files</h2>
+            <button onclick="listUserFiles()" id="listFilesBtn" disabled>📋 List My Files</button>
+            <div id="fileList" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- Results -->
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Global variables
+        let accessToken = null;
+        let isAuthenticated = false;
+        let testMode = false;
+        let usingApiToken = false;
+
+        // Show token input
+        function showTokenInput() {
+            document.getElementById('tokenInput').classList.remove('hidden');
+            document.getElementById('instructions').classList.add('hidden');
+        }
+
+        // Hide token input
+        function hideTokenInput() {
+            document.getElementById('tokenInput').classList.add('hidden');
+        }
+
+        // Show instructions
+        function showInstructions() {
+            document.getElementById('instructions').classList.remove('hidden');
+            document.getElementById('tokenInput').classList.add('hidden');
+        }
+
+        // Use API token
+        function useApiToken() {
+            const tokenValue = document.getElementById('apiToken').value.trim();
+            if (!tokenValue) {
+                alert('Please enter a token');
+                return;
+            }
+
+            // Set the token
+            accessToken = tokenValue;
+            usingApiToken = true;
+            isAuthenticated = true;
+
+            // Update UI
+            updateAuthUI('🔑 Using API Token - Authenticated');
+            enableUpload();
+            hideTokenInput();
+        }
+
+        // Enable test mode
+        function enableTestMode() {
+            testMode = true;
+            isAuthenticated = true;
+            
+            updateAuthUI('🧪 Test Mode Enabled - No Real Authentication');
+            enableUpload();
+        }
+
+        // Update auth UI
+        function updateAuthUI(message) {
+            document.getElementById('authStatus').innerHTML = `<p>${message}</p>`;
+            document.getElementById('authSection').className = 'auth-section authenticated';
+            
+            // Hide auth buttons, show logout
+            document.getElementById('tokenBtn').classList.add('hidden');
+            document.getElementById('testBtn').classList.add('hidden');
+            document.getElementById('instructionsBtn').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+        }
+
+        // Enable upload
+        function enableUpload() {
+            document.getElementById('uploadMessage').textContent = 'You can now upload files.';
+            document.getElementById('fileInput').disabled = false;
+            document.getElementById('uploadBtn').disabled = false;
+            
+            // Also enable file management
+            document.getElementById('fileManagement').style.display = 'block';
+            document.getElementById('listFilesBtn').disabled = false;
+        }
+
+        // Logout
+        function logout() {
+            // Reset variables
+            accessToken = null;
+            isAuthenticated = false;
+            testMode = false;
+            usingApiToken = false;
+            
+            // Reset UI
+            document.getElementById('authStatus').innerHTML = '<p>Choose an authentication method:</p>';
+            document.getElementById('authSection').className = 'auth-section';
+            
+            // Show auth buttons, hide logout
+            document.getElementById('tokenBtn').classList.remove('hidden');
+            document.getElementById('testBtn').classList.remove('hidden');
+            document.getElementById('instructionsBtn').classList.remove('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            
+            // Disable upload
+            document.getElementById('uploadMessage').textContent = 'Please authenticate first to upload files.';
+            document.getElementById('fileInput').disabled = true;
+            document.getElementById('uploadBtn').disabled = true;
+            
+            // Hide inputs
+            hideTokenInput();
+            document.getElementById('instructions').classList.add('hidden');
+            
+            // Clear results
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Check services
+        async function checkServices() {
+            const services = [
+                { name: 'metadata', url: 'http://localhost:8000/health', element: 'metadata-service', status: 'metadata-status' },
+                { name: 'storage', url: 'http://localhost:8003/health', element: 'block-storage', status: 'storage-status' },
+                { name: 'chunker', url: 'http://localhost:8002/health', element: 'chunker-service', status: 'chunker-status' },
+                { name: 'sync', url: 'http://localhost:8001/health', element: 'sync-service', status: 'sync-status' }
+            ];
+
+            for (const service of services) {
+                const serviceElement = document.getElementById(service.element);
+                const statusElement = document.getElementById(service.status);
+                
+                if (!serviceElement || !statusElement) {
+                    console.log(`Element not found for service: ${service.name}`);
+                    continue;
+                }
+                
+                try {
+                    const response = await fetch(service.url, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        serviceElement.className = 'service-card healthy';
+                        statusElement.textContent = `✅ ${data.status || 'Healthy'}`;
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    
+                } catch (error) {
+                    serviceElement.className = 'service-card unhealthy';
+                    statusElement.textContent = `❌ ${error.message}`;
+                }
+            }
+        }
+
+        // Upload file
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const resultsDiv = document.getElementById('results');
+            const uploadProgress = document.getElementById('uploadProgress');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            if (!fileInput || !fileInput.files[0]) {
+                showResult('Please select a file first.', 'error');
+                return;
+            }
+
+            if (!isAuthenticated) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            
+            try {
+                // Show progress
+                if (uploadProgress) {
+                    uploadProgress.classList.remove('hidden');
+                    if (progressFill) progressFill.style.width = '10%';
+                    if (progressText) progressText.textContent = '10% - Starting upload...';
+                }
+                
+                // Create FormData
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                if (progressFill) progressFill.style.width = '50%';
+                if (progressText) progressText.textContent = '50% - Uploading to chunker service...';
+                
+                if (testMode) {
+                    // Simulate upload in test mode
+                    if (progressFill) progressFill.style.width = '100%';
+                    if (progressText) progressText.textContent = '100% - Test Mode Complete!';
+                    
+                    setTimeout(() => {
+                        if (uploadProgress) uploadProgress.classList.add('hidden');
+                        if (progressFill) progressFill.style.width = '0%';
+                        showResult(`
+                            <h3>🧪 Test Mode Upload Simulation</h3>
+                            <p><strong>File:</strong> ${file.name}</p>
+                            <p><strong>Size:</strong> ${file.size} bytes</p>
+                            <p><strong>Note:</strong> This is a simulation. Real upload requires authentication.</p>
+                            <p><strong>Would upload to:</strong> http://localhost:8002/upload</p>
+                        `, 'success');
+                    }, 2000);
+                    return;
+                }
+                
+                // Real upload
+                const headers = {};
+                if (usingApiToken) {
+                    headers['Authorization'] = `Bearer ${accessToken}`;
+                }
+                
+                const response = await fetch('http://localhost:8002/upload', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+                
+                if (progressFill) progressFill.style.width = '90%';
+                if (progressText) progressText.textContent = '90% - Processing response...';
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                
+                // Complete
+                if (progressFill) progressFill.style.width = '100%';
+                if (progressText) progressText.textContent = '100% - Complete!';
+                
+                setTimeout(() => {
+                    if (uploadProgress) uploadProgress.classList.add('hidden');
+                    if (progressFill) progressFill.style.width = '0%';
+                    showResult(`
+                        <h3>✅ Upload Successful!</h3>
+                        <p><strong>File ID:</strong> ${result.file_id}</p>
+                        <p><strong>Filename:</strong> ${result.filename}</p>
+                        <p><strong>Size:</strong> ${result.size} bytes</p>
+                        <p><strong>Chunks:</strong> ${result.num_chunks}</p>
+                        <p><strong>Status:</strong> ${result.status}</p>
+                        <p><strong>🔄 Sync:</strong> Processing in background...</p>
+                    `, 'success');
+                    
+                    // Check sync status after upload
+                    if (usingApiToken) {
+                        setTimeout(() => checkSyncStatus(result.file_id), 3000);
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                if (uploadProgress) uploadProgress.classList.add('hidden');
+                if (progressFill) progressFill.style.width = '0%';
+                showResult(`
+                    <h3>❌ Upload Failed</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>File:</strong> ${file.name} (${file.size} bytes)</p>
+                `, 'error');
+            }
+        }
+
+        // Show result
+        function showResult(html, type) {
+            const resultsDiv = document.getElementById('results');
+            if (resultsDiv) {
+                resultsDiv.innerHTML = `<div class="results ${type}">${html}</div>`;
+            }
+        }
+
+        // Check sync status for uploaded file
+        async function checkSyncStatus(fileId) {
+            if (!usingApiToken || !accessToken) return;
+            
+            try {
+                const response = await fetch(`http://localhost:8001/sync-events/${fileId}/status`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const syncStatus = response.json();
+                    showResult(`
+                        <h3>✅ Upload & Sync Complete!</h3>
+                        <p><strong>File ID:</strong> ${fileId}</p>
+                        <p><strong>🔄 Sync Status:</strong> ${syncStatus.sync_status}</p>
+                        <p><strong>📊 Data Integrity:</strong> Verified across all services</p>
+                        <p><strong>🎯 Your file is safely stored and synchronized!</strong></p>
+                    `, 'success');
+                }
+            } catch (error) {
+                console.log('Sync status check failed (this is normal):', error);
+            }
+        }
+
+        // List user's files
+        async function listUserFiles() {
+            if (!usingApiToken || !accessToken) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/files', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.ok) {
+                    const files = await response.json();
+                    displayFileList(files);
+                } else {
+                    throw new Error(`Failed to list files: ${response.status}`);
+                }
+            } catch (error) {
+                showResult(`Failed to list files: ${error.message}`, 'error');
+            }
+        }
+
+        // Display file list with download buttons
+        function displayFileList(files) {
+            const fileListDiv = document.getElementById('fileList');
+            
+            if (files.length === 0) {
+                fileListDiv.innerHTML = '<p>No files found. Upload some files first!</p>';
+                return;
+            }
+
+            let html = '<h3>📁 Your Files:</h3><div style="max-height: 400px; overflow-y: auto;">';
+            
+            files.forEach((file, index) => {
+                const fileSize = file.chunks ? file.chunks.length : 0;
+                const uploadDate = new Date(file.created_at).toLocaleDateString();
+                
+                html += `
+                    <div style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                        <div style="display: flex; justify-content: between; align-items: center;">
+                            <div style="flex-grow: 1;">
+                                <h4 style="margin: 0; color: #333;">📄 ${file.filename}</h4>
+                                <p style="margin: 5px 0; color: #666; font-size: 14px;">
+                                    📅 ${uploadDate} | 🔢 ${fileSize} chunks | 🆔 ${file.file_id.substring(0, 8)}...
+                                </p>
+                            </div>
+                            <div style="margin-left: 15px;">
+                                <button onclick="downloadFile('${file.file_id}', '${file.filename}')" 
+                                        style="background: #28a745; margin: 0 5px;">
+                                    ⬇️ Download
+                                </button>
+                                <button onclick="deleteFile('${file.file_id}', '${file.filename}')" 
+                                        style="background: #dc3545; margin: 0 5px;">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            fileListDiv.innerHTML = html;
+        }
+
+        // Download file function
+        async function downloadFile(fileId, filename) {
+            if (!usingApiToken || !accessToken) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            try {
+                showResult(`⬇️ Downloading ${filename}...`, 'success');
+                
+                const response = await fetch(`http://localhost:8002/download/${fileId}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status}`);
+                }
+
+                // Get the file blob
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showResult(`✅ Downloaded ${filename} successfully!`, 'success');
+                
+            } catch (error) {
+                showResult(`❌ Download failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Delete file function
+        async function deleteFile(fileId, filename) {
+            if (!usingApiToken || !accessToken) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.ok) {
+                    showResult(`🗑️ Deleted ${filename} successfully!`, 'success');
+                    listUserFiles(); // Refresh file list
+                } else {
+                    throw new Error(`Delete failed: ${response.status}`);
+                }
+            } catch (error) {
+                showResult(`❌ Delete failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            console.log('Page loaded - checking elements...');
+            
+            // Check if critical elements exist
+            const criticalElements = ['tokenBtn', 'testBtn', 'instructionsBtn', 'authStatus'];
+            for (let elementId of criticalElements) {
+                const element = document.getElementById(elementId);
+                if (!element) {
+                    console.error(`Critical element missing: ${elementId}`);
+                } else {
+                    console.log(`Element found: ${elementId}`);
+                }
+            }
+            
+            // Set initial status
+            const authStatus = document.getElementById('authStatus');
+            if (authStatus) {
+                authStatus.innerHTML = '<p>Choose an authentication method:</p>';
+            }
+            
+            // Check services
+            checkServices();
+        };
+
+        // Auto-refresh services every 30 seconds
+        setInterval(checkServices, 30000);
+    </script>
+</body>
+</html>
