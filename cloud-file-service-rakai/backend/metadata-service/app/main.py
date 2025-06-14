@@ -185,3 +185,26 @@ def read_chunks(file_id: str, db: Session = Depends(get_db)):
     # Get chunks
     chunks = crud.get_file_chunks(db, file_id=file_id)
     return chunks
+
+
+@app.get("/files/{file_id}/download-info", dependencies=[Depends(get_current_user)])
+def get_file_download_info(file_id: str, db: Session = Depends(get_db)):
+    """
+    Get file information needed for download (filename + chunk list)
+    """
+    # Get file metadata
+    db_file = crud.get_file(db, file_id=file_id)
+    if db_file is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Get chunks in correct order
+    chunks = crud.get_file_chunks(db, file_id=file_id)
+    
+    # Format response for download
+    return {
+        "file_id": file_id,
+        "filename": db_file.filename,
+        "total_size": sum(1048576 for _ in chunks),  # Approximate, each chunk ~1MB
+        "chunk_count": len(chunks),
+        "chunk_ids": [chunk.storage_path for chunk in chunks]  # Use storage_path as chunk_id
+    }

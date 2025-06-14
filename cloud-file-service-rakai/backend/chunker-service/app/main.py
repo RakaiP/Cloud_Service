@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from .auth import get_current_user
 from .chunker import FileChunker
 from .services import ServiceIntegration
@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any
 import tempfile
 import hashlib
+from io import BytesIO
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -299,3 +300,56 @@ async def get_stats(current_user: dict = Depends(get_current_user)):
         "max_file_size": MAX_FILE_SIZE,
         "user": current_user.get("sub")
     }
+
+@app.get("/download/{file_id}")
+async def download_file(
+    file_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Download a complete file by reconstructing it from chunks
+    """
+    try:
+        user_id = current_user.get("sub")
+        
+        # Extract the Bearer token from the request
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+        
+        access_token = auth_header.split(" ")[1]
+        
+        logger.info(f"User {user_id} downloading file {file_id}")
+        
+        # Initialize service integration
+        services = ServiceIntegration(access_token)
+        
+        # Get file download information from metadata service
+        download_info = await services.get_file_download_info(file_id)
+        
+        logger.info(f"File info: {download_info['filename']} with {download_info['chunk_count']} chunks")
+        
+        # Download all chunks and reconstruct file
+        file_data = await services.reconstruct_file_from_chunks(download_info['chunk_ids'])
+        
+        # Return file as streaming response
+        return StreamingResponse(
+            BytesIO(file_data),
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f"attachment; filename={download_info['filename']}",
+                "Content-Length": str(len(file_data))
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Download failed for file {file_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+@app.options("/download/{file_id}")
+async def download_options():
+    """Handle OPTIONS preflight for download endpoint"""
+    return {"message": "OK"}

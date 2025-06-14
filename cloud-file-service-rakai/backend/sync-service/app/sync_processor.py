@@ -123,22 +123,16 @@ class SyncProcessor:
                     "sync_event_id": event_id
                 }
             
-            # 2. Try to get file chunks before deletion
+            # 2. Get file chunks BEFORE deleting metadata
+            chunks = []
             try:
                 chunks = await self._get_file_chunks(file_id)
                 logger.info(f"Found {len(chunks)} chunks to delete for file {file_id}")
             except Exception as e:
                 logger.warning(f"Could not get chunks for deletion of file {file_id}: {e}")
-                # File might already be deleted or never existed
-                return {
-                    "status": "completed",
-                    "file_id": file_id,
-                    "action": "delete_already_completed",
-                    "message": "File not found, may already be deleted",
-                    "sync_event_id": event_id
-                }
+                # Continue anyway - maybe chunks were already deleted
             
-            # 3. Attempt to delete chunks from block storage
+            # 3. Delete chunks from block storage FIRST
             deleted_chunks = 0
             failed_deletions = 0
             
@@ -152,19 +146,23 @@ class SyncProcessor:
                     failed_deletions += 1
                     logger.warning(f"Failed to delete chunk {chunk.get('storage_path', 'unknown')}: {e}")
             
-            # 4. Try to delete file metadata
+            # 4. Delete file metadata AFTER chunks are cleaned up
             try:
                 await self._delete_file_metadata(file_id)
                 logger.info(f"Deleted metadata for file {file_id}")
+                metadata_deleted = True
             except Exception as e:
                 logger.warning(f"Failed to delete metadata for file {file_id}: {e}")
+                metadata_deleted = False
             
+            # 5. Return comprehensive status
             return {
                 "status": "completed",
                 "file_id": file_id,
                 "chunks_deleted": deleted_chunks,
                 "failed_deletions": failed_deletions,
                 "total_chunks": len(chunks),
+                "metadata_deleted": metadata_deleted,
                 "sync_event_id": event_id,
                 "action": "delete_synchronized"
             }
@@ -296,5 +294,7 @@ class SyncProcessor:
                 f"{METADATA_SERVICE_URL}/files/{file_id}",
                 headers=self.headers,
                 timeout=30.0
+            )
+            response.raise_for_status()
             )
             response.raise_for_status()

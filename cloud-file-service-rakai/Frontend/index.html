@@ -206,6 +206,13 @@
             </div>
         </div>
 
+        <!-- File Management Section -->
+        <div class="upload-section" id="fileManagement" style="display: none;">
+            <h2>📂 Your Files</h2>
+            <button onclick="listUserFiles()" id="listFilesBtn" disabled>📋 List My Files</button>
+            <div id="fileList" style="margin-top: 20px;"></div>
+        </div>
+
         <!-- Results -->
         <div id="results"></div>
     </div>
@@ -279,6 +286,10 @@
             document.getElementById('uploadMessage').textContent = 'You can now upload files.';
             document.getElementById('fileInput').disabled = false;
             document.getElementById('uploadBtn').disabled = false;
+            
+            // Also enable file management
+            document.getElementById('fileManagement').style.display = 'block';
+            document.getElementById('listFilesBtn').disabled = false;
         }
 
         // Logout
@@ -493,6 +504,140 @@
                 }
             } catch (error) {
                 console.log('Sync status check failed (this is normal):', error);
+            }
+        }
+
+        // List user's files
+        async function listUserFiles() {
+            if (!usingApiToken || !accessToken) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/files', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.ok) {
+                    const files = await response.json();
+                    displayFileList(files);
+                } else {
+                    throw new Error(`Failed to list files: ${response.status}`);
+                }
+            } catch (error) {
+                showResult(`Failed to list files: ${error.message}`, 'error');
+            }
+        }
+
+        // Display file list with download buttons
+        function displayFileList(files) {
+            const fileListDiv = document.getElementById('fileList');
+            
+            if (files.length === 0) {
+                fileListDiv.innerHTML = '<p>No files found. Upload some files first!</p>';
+                return;
+            }
+
+            let html = '<h3>📁 Your Files:</h3><div style="max-height: 400px; overflow-y: auto;">';
+            
+            files.forEach((file, index) => {
+                const fileSize = file.chunks ? file.chunks.length : 0;
+                const uploadDate = new Date(file.created_at).toLocaleDateString();
+                
+                html += `
+                    <div style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                        <div style="display: flex; justify-content: between; align-items: center;">
+                            <div style="flex-grow: 1;">
+                                <h4 style="margin: 0; color: #333;">📄 ${file.filename}</h4>
+                                <p style="margin: 5px 0; color: #666; font-size: 14px;">
+                                    📅 ${uploadDate} | 🔢 ${fileSize} chunks | 🆔 ${file.file_id.substring(0, 8)}...
+                                </p>
+                            </div>
+                            <div style="margin-left: 15px;">
+                                <button onclick="downloadFile('${file.file_id}', '${file.filename}')" 
+                                        style="background: #28a745; margin: 0 5px;">
+                                    ⬇️ Download
+                                </button>
+                                <button onclick="deleteFile('${file.file_id}', '${file.filename}')" 
+                                        style="background: #dc3545; margin: 0 5px;">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            fileListDiv.innerHTML = html;
+        }
+
+        // Download file function
+        async function downloadFile(fileId, filename) {
+            if (!usingApiToken || !accessToken) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            try {
+                showResult(`⬇️ Downloading ${filename}...`, 'success');
+                
+                const response = await fetch(`http://localhost:8002/download/${fileId}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status}`);
+                }
+
+                // Get the file blob
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showResult(`✅ Downloaded ${filename} successfully!`, 'success');
+                
+            } catch (error) {
+                showResult(`❌ Download failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Delete file function
+        async function deleteFile(fileId, filename) {
+            if (!usingApiToken || !accessToken) {
+                showResult('Please authenticate first.', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.ok) {
+                    showResult(`🗑️ Deleted ${filename} successfully!`, 'success');
+                    listUserFiles(); // Refresh file list
+                } else {
+                    throw new Error(`Delete failed: ${response.status}`);
+                }
+            } catch (error) {
+                showResult(`❌ Delete failed: ${error.message}`, 'error');
             }
         }
 

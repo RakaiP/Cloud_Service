@@ -189,6 +189,7 @@ class ServiceIntegration:
     async def trigger_sync_event(self, file_id: str, event_type: str, description: str = None) -> Dict[str, Any]:
         """Trigger a sync event in the sync service"""
         try:
+            logger.info(f"Triggering {event_type} sync event for file {file_id}")
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{SYNC_SERVICE_URL}/sync-events",
@@ -207,3 +208,58 @@ class ServiceIntegration:
             logger.warning(f"Failed to trigger sync event for file {file_id}: {e}")
             # Don't fail the main operation if sync fails
             return {"status": "sync_failed", "error": str(e)}
+    
+    async def get_file_download_info(self, file_id: str) -> Dict[str, Any]:
+        """Get file download information from metadata service"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{METADATA_SERVICE_URL}/files/{file_id}/download-info",
+                    headers=self.headers,
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error getting file download info: {e}")
+            raise
+
+    async def download_chunk_from_storage(self, chunk_id: str) -> bytes:
+        """Download a single chunk from block storage"""
+        try:
+            async with httpx.AsyncClient() as client:
+                # Remove content-type for GET request
+                download_headers = {"Authorization": f"Bearer {self.auth_token}"}
+                
+                response = await client.get(
+                    f"{BLOCK_STORAGE_SERVICE_URL}/chunks/{chunk_id}",
+                    headers=download_headers,
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                return response.content
+        except Exception as e:
+            logger.error(f"Error downloading chunk {chunk_id}: {e}")
+            raise
+
+    async def reconstruct_file_from_chunks(self, chunk_ids: List[str]) -> bytes:
+        """Download all chunks and reconstruct the original file"""
+        try:
+            logger.info(f"Reconstructing file from {len(chunk_ids)} chunks")
+            
+            file_chunks = []
+            for i, chunk_id in enumerate(chunk_ids):
+                logger.info(f"Downloading chunk {i+1}/{len(chunk_ids)}: {chunk_id}")
+                chunk_data = await self.download_chunk_from_storage(chunk_id)
+                file_chunks.append(chunk_data)
+                logger.info(f"Downloaded chunk {i+1}, size: {len(chunk_data)} bytes")
+            
+            # Combine all chunks into single file
+            complete_file = b''.join(file_chunks)
+            logger.info(f"File reconstruction complete. Total size: {len(complete_file)} bytes")
+            
+            return complete_file
+            
+        except Exception as e:
+            logger.error(f"Error reconstructing file from chunks: {e}")
+            raise
