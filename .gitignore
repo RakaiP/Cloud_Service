@@ -1,0 +1,96 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# FastAPI
+.env
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+storage/
+chunks/
+minio_data/
+metadata_data/
+sync_data/
+
+# Logs
+logs/
+*.log
+
+# Test files
+test_*.txt
+delete_test_file.txt
+simple_test.txt
+complete_delete_test.txt
+sync_test_file.txt
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# MinIO data (local storage)
+storage/
+minio_data/
+
+# PostgreSQL data
+metadata_data/
+sync_data/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Pytest
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Auth0 secrets (NEVER commit these!)
+**/client_secret*
+**/auth0_secret*
+
+# Local development overrides
+docker-compose.override.yml
