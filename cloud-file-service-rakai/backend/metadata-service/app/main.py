@@ -43,7 +43,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # For production, specify the allowed origins
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # This allows OPTIONS requests
     allow_headers=["*"],
 )
 
@@ -52,9 +52,19 @@ app.add_middleware(
 def health_check():
     return {"status": "healthy", "version": settings.APP_VERSION}
 
+@app.options("/health")
+async def health_check_options():
+    """Handle OPTIONS preflight for health endpoint"""
+    return {"message": "OK"}
+
 @app.get("/")
 async def root():
     return {"status": "Metadata Service is running", "service": "metadata-service"}
+
+@app.options("/")
+async def root_options():
+    """Handle OPTIONS preflight for root endpoint"""
+    return {"message": "OK"}
 
 # File endpoints - protected
 @app.post("/files", response_model=schemas.File, status_code=status.HTTP_201_CREATED, dependencies=[Depends(get_current_user)])

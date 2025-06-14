@@ -21,7 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # For production, specify the allowed origins
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # This allows OPTIONS requests
     allow_headers=["*"],
 )
 
@@ -40,6 +40,11 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"message": "Block Storage Service", "storage": "MinIO", "status": "running", "auth": "Auth0"}
+
+@app.options("/")
+async def root_options():
+    """Handle OPTIONS preflight for root endpoint"""
+    return {"message": "OK"}
 
 @app.get("/health")
 async def health_check():
@@ -60,6 +65,11 @@ async def health_check():
             "error": str(e),
             "message": "MinIO connection failed"
         }
+
+@app.options("/health")
+async def health_check_options():
+    """Handle OPTIONS preflight for health endpoint"""
+    return {"message": "OK"}
 
 @app.post("/chunks")
 async def upload_file_chunk(

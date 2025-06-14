@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 METADATA_SERVICE_URL = os.getenv("METADATA_SERVICE_URL", "http://localhost:8000")
 BLOCK_STORAGE_SERVICE_URL = os.getenv("BLOCK_STORAGE_SERVICE_URL", "http://localhost:8003")
 INDEXER_SERVICE_URL = os.getenv("INDEXER_SERVICE_URL", "http://localhost:8004")
+SYNC_SERVICE_URL = os.getenv("SYNC_SERVICE_URL", "http://sync-service:8000")
 
 class ServiceIntegration:
     """Handles integration with other microservices"""
@@ -184,3 +185,25 @@ class ServiceIntegration:
         except Exception as e:
             logger.error(f"Error creating file version: {e}")
             raise
+    
+    async def trigger_sync_event(self, file_id: str, event_type: str, description: str = None) -> Dict[str, Any]:
+        """Trigger a sync event in the sync service"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{SYNC_SERVICE_URL}/sync-events",
+                    json={
+                        "file_id": file_id,
+                        "event_type": event_type
+                    },
+                    headers=self.headers,
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                result = response.json()
+                logger.info(f"Sync event triggered for file {file_id}: {result}")
+                return result
+        except Exception as e:
+            logger.warning(f"Failed to trigger sync event for file {file_id}: {e}")
+            # Don't fail the main operation if sync fails
+            return {"status": "sync_failed", "error": str(e)}

@@ -25,7 +25,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["*"],  # This allows OPTIONS requests
     allow_headers=["*"],
 )
 
@@ -43,6 +43,11 @@ async def root():
         "max_file_size": MAX_FILE_SIZE
     }
 
+@app.options("/")
+async def root_options():
+    """Handle OPTIONS preflight for root endpoint"""
+    return {"message": "OK"}
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -51,6 +56,11 @@ async def health_check():
         "service": "chunker-service",
         "version": "1.0.0"
     }
+
+@app.options("/health")
+async def health_check_options():
+    """Handle OPTIONS preflight for health endpoint"""
+    return {"message": "OK"}
 
 @app.post("/upload")
 async def upload_file(
@@ -216,10 +226,27 @@ async def process_file_chunks_from_content(
             file_hash
         )
         
+        # 🆕 Trigger sync event for successful upload
+        sync_result = await services.trigger_sync_event(
+            file_id,
+            "upload",
+            f"File {file_info['filename']} uploaded and chunked successfully"
+        )
+        
         logger.info(f"Successfully processed file {file_id} with {len(chunk_metadata)} chunks")
+        logger.info(f"Sync event triggered: {sync_result}")
         
     except Exception as e:
         logger.error(f"Error processing chunks for file {file_id}: {e}")
+        # Trigger sync event for failed upload
+        try:
+            await services.trigger_sync_event(
+                file_id,
+                "upload",
+                f"Upload failed: {str(e)}"
+            )
+        except:
+            pass  # Don't fail if sync trigger fails
 
 @app.get("/files/{file_id}/status")
 async def get_file_status(
