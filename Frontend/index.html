@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>☁️ Cloud File Service</title>
+    
+    <!-- Auth0 SPA SDK -->
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.0/auth0-spa-js.production.js"></script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>☁️ Cloud File Service</h1>
+            <p>Secure, Fast, and Scalable File Storage with Sharing</p>
+        </div>
+
+        <div class="content">
+            <!-- Status Message -->
+            <div id="statusMessage" class="status-message"></div>
+
+            <!-- Authentication Section -->
+            <div class="auth-section">
+                <div id="loginSection">
+                    <h2>🔐 Welcome to Cloud File Service</h2>
+                    <p>Please log in to access your files securely</p>
+                    <button id="loginBtn" class="btn">🚀 Log In with Auth0</button>
+                    <p style="margin-top: 15px; color: #7f8c8d; font-size: 0.9em;">
+                        ✨ Secure authentication powered by Auth0<br>
+                        🔒 Your data is protected with enterprise-grade security
+                    </p>
+                </div>
+
+                <div id="userSection" class="hidden">
+                    <div class="user-info">
+                        <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
+                        <div class="user-details">
+                            <h3 id="userName">Loading...</h3>
+                            <p id="userEmail">Loading...</p>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn btn-logout">🚪 Log Out</button>
+                </div>
+            </div>
+
+            <!-- File Operations Section -->
+            <div id="fileOperations" class="hidden">
+                <div class="file-section">
+                    <!-- Section Tabs -->
+                    <div class="section-tabs">
+                        <button class="tab-button active" onclick="switchTab('myFiles')">📁 My Files</button>
+                        <button class="tab-button" onclick="switchTab('sharedWithMe')">📨 Shared With Me</button>
+                        <button class="tab-button" onclick="switchTab('mySharedFiles')">🤝 My Shared Files</button>
+                    </div>
+
+                    <!-- My Files Tab -->
+                    <div id="myFilesTab" class="tab-content active">
+                        <h2 class="section-title">
+                            📤 Upload Files
+                            <button id="refreshBtn" class="btn btn-small">🔄 Refresh</button>
+                        </h2>
+                        
+                        <div class="upload-section" id="uploadArea">
+                            <div style="font-size: 3em; margin-bottom: 15px;">☁️</div>
+                            <h3>Drag & Drop Files Here</h3>
+                            <p style="margin: 10px 0;">or</p>
+                            <label for="fileInput" class="upload-label">
+                                📁 Choose Files
+                            </label>
+                            <input type="file" id="fileInput" class="file-input" multiple>
+                            <p style="margin-top: 15px; color: #7f8c8d;">
+                                Supports all file types • Automatic chunking for large files
+                            </p>
+                        </div>
+
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress-fill" id="progressFill">
+                                <div class="progress-text" id="progressText">0%</div>
+                            </div>
+                        </div>
+
+                        <div class="loading" id="filesLoading">Loading your files</div>
+                        <div class="files-grid" id="filesGrid"></div>
+                    </div>
+
+                    <!-- Shared Files Tab -->
+                    <div id="sharedWithMeTab" class="tab-content">
+                        <h2 class="section-title">📨 Files Shared With Me</h2>
+                        <div class="loading" id="sharedFilesLoading">Loading shared files</div>
+                        <div class="files-grid" id="sharedFilesGrid"></div>
+                    </div>
+
+                    <!-- My Shared Files Tab -->
+                    <div id="mySharedFilesTab" class="tab-content">
+                        <h2 class="section-title">🤝 Files I've Shared</h2>
+                        <div class="loading" id="mySharedFilesLoading">Loading your shared files</div>
+                        <div class="files-grid" id="mySharedFilesGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Sharing Modal with Advanced Search -->
+    <div id="sharingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="sharingModalTitle">🤝 Share File</h2>
+                <span class="close" onclick="closeSharingModal()">&times;</span>
+            </div>
+            
+            <div class="share-instructions">
+                <h4>🎯 Smart User Search</h4>
+                <p>Type a name or email to search for users in the system. Select from the dropdown or enter an email directly.</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="shareEmail">👤 Find User:</label>
+                <div class="user-search-container">
+                    <div class="search-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="shareEmail" 
+                            placeholder="Type name or email to search..."
+                            class="search-input"
+                            autocomplete="off"
+                        >
+                        <div class="search-spinner" id="searchSpinner">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-search-results" id="userSearchResults">
+                        <!-- Search results will be populated here -->
+                    </div>
+                    
+                    <div class="selected-user-container" id="selectedUserContainer">
+                        <!-- Selected user will be displayed here -->
+                    </div>
+                </div>
+                
+                <div class="email-validation" id="emailValidation"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="sharePermissions">🔐 Permissions:</label>
+                <select id="sharePermissions">
+                    <option value="read">👁️ View Only (Can download and view)</option>
+                    <option value="write">✏️ View & Edit (Can modify and reshare)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <button class="btn" onclick="shareFileAdvanced()" style="width: 100%;" id="shareFileButton">
+                    🤝 Share File
+                </button>
+            </div>
+
+            <div class="shared-with-section">
+                <h3>👥 Currently Shared With:</h3>
+                <div id="currentShares">
+                    <p style="color: #7f8c8d; font-style: italic;">Loading sharing information...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth0 Configuration - ENHANCED with proper scopes
+        const auth0Config = {
+            domain: 'dev-mc721bw3z72t3xex.us.auth0.com',
+            clientId: 'LbzsusVrT7HqFFWf3hkmrRMKKdRqEojc',
+            authorizationParams: {
+                redirect_uri: window.location.origin,
+                audience: 'https://cloud-api.rakai/',
+                scope: 'openid profile email read:current_user'  // ✅ ENHANCED: Add read:current_user scope
+            }
+        };
+
+        let auth0Client;
+        let currentUser = null;
+        let accessToken = null;
+        let currentSharingFileId = null;
+        let currentSharingFileName = null;
+
+        // Advanced User Search State Management
+        let selectedUserForSharing = null;
+        let searchTimeout = null;
+        let searchAbortController = null;
+        let currentSearchResults = [];
+        let keyboardSelectedIndex = -1;
+        let isSearching = false;
+
+        // Initialize Auth0
+        async function initAuth0() {
+            try {
+                console.log('🚀 Initializing Auth0...');
+                auth0Client = await auth0.createAuth0Client(auth0Config);
+                
+                if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+                    console.log('📥 Handling Auth0 callback...');
+                    await auth0Client.handleRedirectCallback();
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    showStatusMessage('✅ Successfully logged in!', 'success');
+                }
+                
+                const isAuthenticated = await auth0Client.isAuthenticated();
+                console.log('🔐 Authentication status:', isAuthenticated);
+                
+                if (isAuthenticated) {
+                    currentUser = await auth0Client.getUser();
+                    accessToken = await auth0Client.getTokenSilently();
+                    console.log('👤 User authenticated:', currentUser.name);
+                    showUserInterface();
+                    loadUserFiles();
+                } else {
+                    console.log('🔓 User not authenticated');
+                    showLoginInterface();
+                }
+            } catch (error) {
+                console.error('❌ Auth0 initialization error:', error);
+                showStatusMessage('Authentication setup failed. Please refresh the page.', 'error');
+                showLoginInterface();
+            }
+        }
+
+        function showLoginInterface() {
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('userSection').classList.add('hidden');
+            document.getElementById('fileOperations').classList.add('hidden');
+        }
+
+        function showUserInterface() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('userSection').classList.remove('hidden');
+            document.getElementById('fileOperations').classList.remove('hidden');
+            
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.name || 'User';
+                document.getElementById('userEmail').textContent = currentUser.email || '';
+                document.getElementById('userAvatar').src = currentUser.picture || 'https://via.placeholder.com/50';
+            }
+        }
+
+        async function login() {
+            try {
+                console.log('🔐 Redirecting to Auth0 login...');
+                showStatusMessage('🔄 Redirecting to secure login...', 'info');
+                await auth0Client.loginWithRedirect();
+            } catch (error) {
+                console.error('❌ Login error:', error);
+                showStatusMessage('Login failed. Please try again.', 'error');
+            }
+        }
+
+        async function logout() {
+            try {
+                console.log('🚪 Logging out...');
+                await auth0Client.logout({
+                    logoutParams: {
+                        returnTo: window.location.origin
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Logout error:', error);
+                showStatusMessage('Logout failed. Please try again.', 'error');
+            }
+        }
+
+        async function getAccessToken() {
+            try {
+                if (!auth0Client) {
+                    throw new Error('Auth0 not initialized');
+                }
+                
+                // ✅ ENHANCED: Get token with custom claims
+                const token = await auth0Client.getTokenSilently({
+                    authorizationParams: {
+                        scope: 'openid profile email read:current_user'
+                    }
+                });
+                
+                return token;
+            } catch (error) {
+                console.error('❌ Token refresh failed:', error);
+                showStatusMessage('Session expired. Please log in again.', 'error');
+                showLoginInterface();
+                return null;
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            if (tabName === 'myFiles') {
+                document.getElementById('myFilesTab').classList.add('active');
+                document.querySelector('[onclick="switchTab(\'myFiles\')"]').classList.add('active');
+                loadUserFiles();
+            } else if (tabName === 'sharedWithMe') {
+                document.getElementById('sharedWithMeTab').classList.add('active');
+                document.querySelector('[onclick="switchTab(\'sharedWithMe\')"]').classList.add('active');
+                loadSharedFiles();
+            } else if (tabName === 'mySharedFiles') {
+                document.getElementById('mySharedFilesTab').classList.add('active');
+                document.querySelector('[onclick="switchTab(\'mySharedFiles\')"]').classList.add('active');
+                loadMySharedFiles();
+            }
+        }
+
+        // File operations
+        async function uploadFile(file) {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                showProgress(0, `Uploading ${file.name}...`);
+
+                const response = await fetch('http://localhost:8002/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showProgress(100, 'Complete!');
+                    showStatusMessage(`✅ ${file.name} uploaded successfully!`, 'success');
+                    setTimeout(() => {
+                        hideProgress();
+                        loadUserFiles();
+                    }, 1000);
+                } else {
+                    const error = await response.text();
+                    throw new Error(`Upload failed: ${response.status} - ${error}`);
+                }
+            } catch (error) {
+                console.error('❌ Upload error:', error);
+                hideProgress();
+                showStatusMessage(`❌ Upload failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadUserFiles() {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                document.getElementById('filesLoading').style.display = 'block';
+                document.getElementById('filesGrid').innerHTML = '';
+
+                const response = await fetch('http://localhost:8000/files', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const files = await response.json();
+                    displayFiles(files);
+                } else {
+                    throw new Error(`Failed to load files: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Load files error:', error);
+                showStatusMessage('Failed to load files. Please refresh the page.', 'error');
+            } finally {
+                document.getElementById('filesLoading').style.display = 'none';
+            }
+        }
+
+        function displayFiles(files) {
+            const filesGrid = document.getElementById('filesGrid');
+            filesGrid.innerHTML = '';
+
+            if (files.length === 0) {
+                filesGrid.innerHTML = `
+                    <div style="text-align: center; color: #7f8c8d; grid-column: 1/-1; padding: 40px;">
+                        <div style="font-size: 3em; margin-bottom: 20px;">📁</div>
+                        <h3>No files uploaded yet</h3>
+                        <p>Upload your first file to get started!</p>
+                        <div style="margin-top: 20px;">
+                            <button onclick="debugSharingData()" class="btn btn-small" style="background: #f39c12;">
+                                🔍 Debug Sharing Data
+                            </button>
+                            <button onclick="quickSharingTest()" class="btn btn-small" style="background: #27ae60;">
+                                🧪 Quick Test
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            files.forEach(file => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                const safeFilename = escapeHtml(file.filename);
+                const safeFileId = escapeHtml(file.file_id);
+                
+                fileCard.innerHTML = `
+                    <div class="file-icon">📄</div>
+                    <div class="file-name">${safeFilename}</div>
+                    <div class="file-size">${formatFileSize(file.file_size || 0)}</div>
+                    <div class="file-actions">
+                        <button class="btn btn-small btn-share" onclick="openSharingModal('${safeFileId}', '${safeFilename}')">
+                            🤝 Share
+                        </button>
+                        <button class="btn btn-small" onclick="downloadFile('${safeFileId}', '${safeFilename}')">
+                            ⬇️ Download
+                        </button>
+                        <button class="btn btn-small btn-logout" onclick="deleteFile('${safeFileId}', '${safeFilename}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                `;
+                filesGrid.appendChild(fileCard);
+            });
+
+            // Add debug card at the end if there are files
+            if (files.length > 0) {
+                const debugCard = document.createElement('div');
+                debugCard.className = 'file-card';
+                debugCard.style.cssText = 'border: 2px dashed #f39c12; background: #fef9e7;';
+                debugCard.innerHTML = `
+                    <div class="file-icon" style="color: #f39c12;">🔍</div>
+                    <div class="file-name">Debug Tools</div>
+                    <div class="file-size">Troubleshooting</div>
+                    <div class="file-actions">
+                        <button class="btn btn-small" onclick="debugSharingData()" style="background: #f39c12;">
+                            🔍 Full Debug
+                        </button>
+                        <button class="btn btn-small" onclick="quickSharingTest()" style="background: #27ae60;">
+                            🧪 Quick Test
+                        </button>
+                    </div>
+                `;
+                filesGrid.appendChild(debugCard);
+            }
+        }
+
+        async function downloadFile(fileId, filename) {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                showStatusMessage(`📥 Starting download...`, 'info');
+
+                const response = await fetch(`http://localhost:8002/download/${fileId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showStatusMessage(`✅ Downloaded successfully!`, 'success');
+                } else {
+                    throw new Error(`Download failed: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Download error:', error);
+                showStatusMessage(`❌ Download failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteFile(fileId, filename) {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+                return;
+            }
+
+            try {
+                showStatusMessage(`🗑️ Deleting ${filename}...`, 'info');
+
+                const response = await fetch(`http://localhost:8000/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    showStatusMessage(`✅ ${filename} deleted successfully!`, 'success');
+                    loadUserFiles();
+                } else {
+                    throw new Error(`Delete failed: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Delete error:', error);
+                showStatusMessage(`❌ Delete failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Enhanced debug function with better user info
+        async function debugSharingData() {
+            const token = await getAccessToken();
+            if (!token) {
+                console.error('❌ No access token available for debug');
+                alert('❌ Authentication required for debug functionality');
+                return;
+            }
+
+            try {
+                console.log('🔍 Starting debug sharing data request...');
+                
+                // ✅ ENHANCED: Get fresh user info from Auth0
+                const freshUserInfo = await auth0Client.getUser();
+                console.log('👤 Fresh Auth0 user info:', freshUserInfo);
+                
+                const response = await fetch('http://localhost:8000/debug/sharing-data', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const debugData = await response.json();
+                    console.log('🔍 ENHANCED DEBUG SHARING DATA:', debugData);
+                    
+                    // Show enhanced debug info with Auth0 user details
+                    const debugInfo = `
+🔍 ENHANCED DEBUG INFORMATION:
+
+👤 Frontend User Details (Auth0):
+  User ID: ${freshUserInfo.sub || 'NULL'}
+  Email: ${freshUserInfo.email || 'NULL'}
+  Name: ${freshUserInfo.name || 'NULL'}  
+  Nickname: ${freshUserInfo.nickname || 'NULL'}
+  Email Verified: ${freshUserInfo.email_verified || 'NULL'}
+
+👤 Backend User Details (From Token):
+  User ID: ${debugData.current_user.user_id || 'NULL'}
+  Email: ${debugData.current_user.email || 'NULL'}
+  Name: ${debugData.current_user.name || 'NULL'}  
+  Nickname: ${debugData.current_user.nickname || 'NULL'}
+  All Search Identifiers: ${debugData.current_user.all_identifiers ? debugData.current_user.all_identifiers.join(', ') : 'NULL'}
+
+📊 Database Summary:
+  Total Files: ${debugData.total_files}
+  Total Shares: ${debugData.total_shares}
+
+📁 Files in Database:
+${debugData.files.map(f => `  - ${f.filename} (Owner: ${f.owner_user_id || 'NULL'}, Email: ${f.owner_email || 'NULL'})`).join('\n')}
+
+🤝 All Sharing Permissions:
+${debugData.sharing_permissions.length > 0 ? 
+  debugData.sharing_permissions.map(s => `  - File: ${s.file_id.substring(0,8)}..., Shared with: ${s.shared_with_user_id}, By: ${s.owner_user_id}`).join('\n') :
+  '  No sharing permissions found'
+}
+
+✅ Matches for Current User:
+${debugData.matches_for_current_user && debugData.matches_for_current_user.length > 0 ? 
+  debugData.matches_for_current_user.map(m => `  - File: ${m.file_id.substring(0,8)}..., Shared as: ${m.shared_with_user_id}, Permissions: ${m.permissions}`).join('\n') :
+  '  ❌ No matches found - this is why shared files are empty!'
+}
+
+🩺 DIAGNOSIS:
+${freshUserInfo.email ? 
+  `✅ Frontend email: ${freshUserInfo.email}` : 
+  '❌ FRONTEND EMAIL IS NULL!'
+}
+${debugData.current_user.email ? 
+  `✅ Backend email: ${debugData.current_user.email}` : 
+  '❌ BACKEND EMAIL IS NULL - Token doesn\'t contain email!'
+}
+${debugData.matches_for_current_user && debugData.matches_for_current_user.length > 0 ? 
+  '✅ Found matching shares' : 
+  '❌ No matching shares found - check if files were shared with the right identifier'
+}
+
+🔧 CRITICAL FIXES NEEDED:
+1. ❌ Token missing email claims - check Auth0 application settings
+2. ❌ Files shared with emails but token has no email
+3. ✅ Try manual sharing test with user ID: ${freshUserInfo.sub}
+4. ✅ Update Auth0 application to include email in tokens
+
+🎯 MANUAL TEST:
+To test sharing, try sharing a file with these identifiers:
+- Email: ${freshUserInfo.email || 'NOT_AVAILABLE'}
+- User ID: ${freshUserInfo.sub || 'NOT_AVAILABLE'}
+- Short ID: ${freshUserInfo.sub ? freshUserInfo.sub.split('|')[1] : 'NOT_AVAILABLE'}
+                    `;
+                    
+                    // Create enhanced modal
+                    const debugModal = document.createElement('div');
+                    debugModal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.8);
+                        z-index: 10000;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 20px;
+                    `;
+                    
+                    debugModal.innerHTML = `
+                        <div style="
+                            background: white;
+                            padding: 30px;
+                            border-radius: 10px;
+                            max-width: 90%;
+                            max-height: 90%;
+                            overflow: auto;
+                            font-family: monospace;
+                            white-space: pre-wrap;
+                            position: relative;
+                        ">
+                            <button onclick="this.parentElement.parentElement.remove()" style="
+                                position: absolute;
+                                top: 10px;
+                                right: 15px;
+                                background: #e74c3c;
+                                color: white;
+                                border: none;
+                                border-radius: 50%;
+                                width: 30px;
+                                height: 30px;
+                                cursor: pointer;
+                                font-size: 18px;
+                            ">×</button>
+                            <h2 style="margin-top: 0; color: #2c3e50;">🔍 Enhanced Sharing Debug</h2>
+                            <div style="font-size: 14px; line-height: 1.4; color: #2c3e50;">${debugInfo}</div>
+                            <div style="margin-top: 20px; text-align: center;">
+                                <button onclick="navigator.clipboard.writeText('${debugInfo.replace(/'/g, "\\'")}'); alert('✅ Debug info copied!')" class="btn btn-small">
+                                    📋 Copy Debug Info
+                                </button>
+                                <button onclick="testSharing()" class="btn btn-small" style="background: #27ae60;">
+                                    🧪 Test Sharing Fix
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(debugModal);
+                    
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Failed to get debug data:', response.status, errorText);
+                    alert(`❌ Failed to get debug data: HTTP ${response.status}\n\n${errorText}`);
+                }
+            } catch (error) {
+                console.error('❌ Error getting debug data:', error);
+                alert(`❌ Error getting debug data: ${error.message}\n\nCheck the browser console for more details.`);
+            }
+        }
+
+        // ✅ NEW: Test sharing functionality
+        async function testSharing() {
+            try {
+                const userInfo = await auth0Client.getUser();
+                
+                if (!userInfo.email) {
+                    alert('❌ Cannot test sharing - no email in Auth0 user profile!\n\nPlease ensure your Auth0 application includes email claims.');
+                    return;
+                }
+                
+                alert(`🧪 Testing sharing with your own email: ${userInfo.email}\n\nThis will test if the sharing system can find you as a user.`);
+                
+                // Get the first file to test with
+                const token = await getAccessToken();
+                const filesResponse = await fetch('http://localhost:8000/files', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!filesResponse.ok) {
+                    throw new Error('Failed to get files list');
+                }
+                
+                const files = await filesResponse.json();
+                if (files.length === 0) {
+                    alert('❌ No files found to test sharing with. Please upload a file first.');
+                    return;
+                }
+                
+                const testFile = files[0];
+                alert(`🎯 Testing sharing of "${testFile.filename}" with ${userInfo.email}`);
+                
+                // Try to share the file with yourself
+                const shareResponse = await fetch(`http://localhost:8000/files/${testFile.file_id}/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        share_with_email: userInfo.email,
+                        permissions: 'read'
+                    })
+                });
+                
+                if (shareResponse.ok) {
+                    alert('✅ Test sharing successful! The email resolution is working.');
+                } else {
+                    const errorText = await shareResponse.text();
+                    alert(`❌ Test sharing failed: ${shareResponse.status}\n\n${errorText}`);
+                }
+                
+            } catch (error) {
+                console.error('Test sharing error:', error);
+                alert(`❌ Test sharing error: ${error.message}`);
+            }
+        }
+
+        // ✅ NEW: Quick sharing test function
+        async function quickSharingTest() {
+            try {
+                console.log('🧪 Starting quick sharing test...');
+                
+                const token = await getAccessToken();
+                const userInfo = await auth0Client.getUser();
+                
+                console.log('👤 Current user info:', userInfo);
+                
+                // Test the new debug endpoint
+                const debugResponse = await fetch('http://localhost:8000/debug/sharing-data', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (debugResponse.ok) {
+                    const debugData = await debugResponse.json();
+                    console.log('🔍 Enhanced debug data:', debugData);
+                    
+                    const hasEmail = debugData.current_user.email;
+                    const hasMatches = debugData.exact_matches_for_current_user.length > 0;
+                    const hasPartialMatches = debugData.partial_matches_for_current_user.length > 0;
+                    
+                    let message = `🧪 QUICK SHARING TEST RESULTS:\n\n`;
+                    message += `👤 User Email in Token: ${hasEmail ? '✅ ' + debugData.current_user.email : '❌ NULL'}\n`;
+                    message += `🎯 Exact Matches Found: ${hasMatches ? '✅ ' + debugData.exact_matches_for_current_user.length : '❌ 0'}\n`;
+                    message += `🔍 Partial Matches Found: ${hasPartialMatches ? '⚠️ ' + debugData.partial_matches_for_current_user.length : '❌ 0'}\n\n`;
+                    
+                    if (!hasEmail) {
+                        message += `🔧 FIXES NEEDED:\n`;
+                        message += `1. ❌ Auth0 token missing email claim\n`;
+                        message += `2. 🔧 Check Auth0 application settings\n`;
+                        message += `3. 🔧 Ensure scopes include 'email'\n\n`;
+                    }
+                    
+                    if (hasMatches) {
+                        message += `✅ SHARING IS WORKING!\n`;
+                        debugData.exact_matches_for_current_user.forEach(match => {
+                            message += `   - File shared with: ${match.shared_with_user_id}\n`;
+                        });
+                    } else if (hasPartialMatches) {
+                        message += `⚠️ PARTIAL MATCHES (might work):\n`;
+                        debugData.partial_matches_for_current_user.forEach(match => {
+                            message += `   - File shared with: ${match.shared_with_user_id}\n`;
+                        });
+                    } else {
+                        message += `❌ NO SHARING MATCHES FOUND\n`;
+                        message += `📋 Files are shared with these identifiers:\n`;
+                        [...new Set(debugData.sharing_permissions.map(s => s.shared_with_user_id))].forEach(id => {
+                            message += `   - ${id}\n`;
+                        });
+                    }
+                    
+                    alert(message);
+                } else {
+                    throw new Error(`Debug request failed: ${debugResponse.status}`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Quick test failed:', error);
+                alert(`❌ Quick test failed: ${error.message}`);
+            }
+        }
+
+        // ✅ CRITICAL FIX: Add missing sharing modal functions
+        function openSharingModal(fileId, filename) {
+            currentSharingFileId = fileId;
+            currentSharingFileName = filename;
+            
+            // Update modal title
+            document.getElementById('sharingModalTitle').textContent = `🤝 Share "${filename}"`;
+            
+            // Clear previous state
+            clearSelectedUser();
+            document.getElementById('sharePermissions').value = 'read';
+            
+            // Load current shares
+            loadCurrentShares(fileId);
+            
+            // Show modal
+            document.getElementById('sharingModal').style.display = 'block';
+        }
+
+        function closeSharingModal() {
+            document.getElementById('sharingModal').style.display = 'none';
+            currentSharingFileId = null;
+            currentSharingFileName = null;
+            clearSelectedUser();
+        }
+
+        async function loadCurrentShares(fileId) {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                const response = await fetch(`http://localhost:8000/files/${fileId}/shares`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const sharesData = await response.json();
+                    displayCurrentShares(sharesData.shares || []);
+                } else {
+                    console.error('Failed to load current shares:', response.status);
+                    document.getElementById('currentShares').innerHTML = '<p style="color: #e74c3c;">Failed to load sharing information.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading current shares:', error);
+                document.getElementById('currentShares').innerHTML = '<p style="color: #e74c3c;">Error loading sharing information.</p>';
+            }
+        }
+
+        function displayCurrentShares(shares) {
+            const container = document.getElementById('currentShares');
+            
+            if (shares.length === 0) {
+                container.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">This file is not shared with anyone yet.</p>';
+                return;
+            }
+
+            container.innerHTML = shares.map(share => `
+                <div class="shared-user">
+                    <div class="shared-user-info">
+                        <div class="shared-user-email">${escapeHtml(share.shared_with_user_id)}</div>
+                        <div class="shared-user-permissions">${share.permissions === 'read' ? '👁️ View Only' : '✏️ View & Edit'}</div>
+                    </div>
+                    <button class="btn-revoke" onclick="revokeShare('${escapeHtml(share.shared_with_user_id)}')">
+                        🗑️ Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function revokeShare(userId) {
+            if (!confirm('Are you sure you want to remove sharing access for this user?')) {
+                return;
+            }
+
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                const response = await fetch(`http://localhost:8000/files/${currentSharingFileId}/share/${encodeURIComponent(userId)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    showStatusMessage('✅ Sharing access removed successfully!', 'success');
+                    loadCurrentShares(currentSharingFileId);
+                } else {
+                    throw new Error(`Failed to remove sharing: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error revoking share:', error);
+                showStatusMessage('❌ Failed to remove sharing access', 'error');
+            }
+        }
+
+        // Enhanced email validation with Auth0 user lookup
+        async function validateAndLookupUser(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!emailRegex.test(email)) {
+                showEmailValidation('❌ Please enter a valid email address.', 'invalid');
+                return null;
+            }
+            
+            try {
+                showEmailValidation('🔍 Validating email...', 'info');
+                
+                const token = await getAccessToken();
+                const response = await fetch(`http://localhost:8000/users/validate-email?email=${encodeURIComponent(email)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    if (result.valid && result.user) {
+                        const user = result.user;
+                        const message = user.verified 
+                            ? `✅ User found: ${user.name}` 
+                            : `✅ Email valid: Will invite ${user.name} when they join`;
+                        
+                        showEmailValidation(message, 'valid');
+                        return user;
+                    } else {
+                        showEmailValidation(`❌ ${result.message}`, 'invalid');
+                        return null;
+                    }
+                } else {
+                    throw new Error(`Validation failed: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error validating email:', error);
+                // Don't block sharing for validation errors
+                showEmailValidation('⚠️ Unable to validate user, but email format is valid', 'info');
+                return {
+                    name: email.split('@')[0],
+                    email: email,
+                    picture: 'https://via.placeholder.com/32',
+                    verified: false
+                };
+            }
+        }
+
+        // ✅ CRITICAL FIX: Complete shareFileAdvanced function
+        async function shareFileAdvanced() {
+            if (!currentSharingFileId) {
+                console.error('❌ No file selected for sharing');
+                return;
+            }
+
+            const token = await getAccessToken();
+            if (!token) return;
+
+            const permissions = document.getElementById('sharePermissions').value;
+            let shareWithEmail = '';
+            let userToShareWith = null;
+
+            // Determine what to share with
+            if (selectedUserForSharing) {
+                userToShareWith = selectedUserForSharing;
+                shareWithEmail = selectedUserForSharing.email;
+            } else {
+                // Try to use direct email input
+                const emailInput = document.getElementById('shareEmail').value.trim();
+                
+                if (!emailInput) {
+                    showEmailValidation('❌ Please select a user or enter an email address.', 'invalid');
+                    return;
+                }
+                
+                // Validate and lookup user
+                userToShareWith = await validateAndLookupUser(emailInput);
+                if (!userToShareWith) {
+                    return; // Validation failed
+                }
+                
+                shareWithEmail = userToShareWith.email;
+            }
+
+            // Check if sharing with yourself
+            if (currentUser && currentUser.email === shareWithEmail) {
+                showEmailValidation('❌ You cannot share a file with yourself.', 'invalid');
+                return;
+            }
+
+            try {
+                console.log('🤝 Sharing file:', currentSharingFileId, 'with:', userToShareWith.name, `(${shareWithEmail})`);
+                
+                // Disable button and show loading
+                const shareButton = document.getElementById('shareFileButton');
+                shareButton.disabled = true;
+                shareButton.textContent = '🔄 Sharing...';
+                
+                const sharePayload = {
+                    share_with_email: shareWithEmail,
+                    permissions: permissions
+                };
+
+                const response = await fetch(`http://localhost:8000/files/${currentSharingFileId}/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(sharePayload)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Share success:', result);
+                    
+                    showStatusMessage(`✅ File shared with ${userToShareWith.name}!`, 'success');
+                    
+                    // Clear the form
+                    clearSelectedUser();
+                    
+                    // Reload current shares
+                    loadCurrentShares(currentSharingFileId);
+                    
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ Share error:', response.status, errorText);
+                    
+                    let errorMessage = `Sharing failed with status ${response.status}`;
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.detail || errorMessage;
+                    } catch {
+                        // Use default message
+                    }
+                    
+                    showEmailValidation(`❌ ${errorMessage}`, 'invalid');
+                    throw new Error(errorMessage);
+                }
+            } catch (error) {
+                console.error('❌ Sharing error:', error);
+                showStatusMessage(`❌ Sharing failed: ${error.message}`, 'error');
+            } finally {
+                // Re-enable button
+                const shareButton = document.getElementById('shareFileButton');
+                shareButton.disabled = false;
+                shareButton.textContent = '🤝 Share File';
+            }
+        }
+
+        // ✅ CRITICAL FIX: Add missing shared files functions
+        async function loadSharedFiles() {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                document.getElementById('sharedFilesLoading').style.display = 'block';
+                document.getElementById('sharedFilesGrid').innerHTML = '';
+
+                const response = await fetch('http://localhost:8000/shared-with-me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const files = await response.json();
+                    displaySharedFiles(files);
+                } else {
+                    throw new Error(`Failed to load shared files: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Load shared files error:', error);
+                showStatusMessage('Failed to load shared files. Please refresh the page.', 'error');
+            } finally {
+                document.getElementById('sharedFilesLoading').style.display = 'none';
+            }
+        }
+
+        function displaySharedFiles(files) {
+            const sharedGrid = document.getElementById('sharedFilesGrid');
+            sharedGrid.innerHTML = '';
+
+            if (files.length === 0) {
+                sharedGrid.innerHTML = `
+                    <div style="text-align: center; color: #7f8c8d; grid-column: 1/-1; padding: 40px;">
+                        <div style="font-size: 3em; margin-bottom: 20px;">📭</div>
+                        <h3>No files shared with you yet</h3>
+                        <p>When someone shares a file with you, it will appear here.</p>
+                        <button onclick="debugSharingData()" class="btn btn-small" style="margin-top: 20px;">
+                            🔍 Debug Sharing Data
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            files.forEach(file => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                fileCard.innerHTML = `
+                    <div class="file-icon">📄</div>
+                    <div class="file-name">${escapeHtml(file.filename)}</div>
+                    <div class="file-size">${formatFileSize(file.file_size || 0)}</div>
+                    <div style="font-size: 0.8em; color: #7f8c8d; margin: 10px 0;">
+                        Shared by: ${escapeHtml(file.owner_user_id)}
+                        <br>Permissions: ${file.permissions === 'read' ? '👁️ View Only' : '✏️ View & Edit'}
+                        <br>Shared: ${new Date(file.shared_at).toLocaleDateString()}
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-small" onclick="downloadFile('${escapeHtml(file.file_id)}', '${escapeHtml(file.filename)}')">
+                            ⬇️ Download
+                        </button>
+                        ${file.permissions === 'write' ? `
+                            <button class="btn btn-small btn-share" onclick="openSharingModal('${escapeHtml(file.file_id)}', '${escapeHtml(file.filename)}')">
+                                🤝 Reshare
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+                sharedGrid.appendChild(fileCard);
+            });
+        }
+
+        async function loadMySharedFiles() {
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                document.getElementById('mySharedFilesLoading').style.display = 'block';
+                document.getElementById('mySharedFilesGrid').innerHTML = '';
+
+                const response = await fetch('http://localhost:8000/my-shared-files', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayMySharedFiles(data.shared_files || []);
+                } else {
+                    throw new Error(`Failed to load my shared files: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('❌ Load my shared files error:', error);
+                showStatusMessage('Failed to load shared files. Please refresh the page.', 'error');
+            } finally {
+                document.getElementById('mySharedFilesLoading').style.display = 'none';
+            }
+        }
+
+        function displayMySharedFiles(files) {
+            const mySharedGrid = document.getElementById('mySharedFilesGrid');
+            mySharedGrid.innerHTML = '';
+
+            if (files.length === 0) {
+                mySharedGrid.innerHTML = `
+                    <div style="text-align: center; color: #7f8c8d; grid-column: 1/-1; padding: 40px;">
+                        <div style="font-size: 3em; margin-bottom: 20px;">🤝</div>
+                        <h3>You haven't shared any files yet</h3>
+                        <p>Files you share with others will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            files.forEach(file => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                fileCard.innerHTML = `
+                    <div class="file-icon">📄</div>
+                    <div class="file-name">${escapeHtml(file.filename)}</div>
+                    <div class="file-size">${formatFileSize(file.file_size || 0)}</div>
+                    <div style="font-size: 0.8em; color: #7f8c8d; margin: 10px 0;">
+                        Shared with ${file.shared_with.length} user(s)
+                        <br>Created: ${new Date(file.created_at).toLocaleDateString()}
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-small btn-share" onclick="openSharingModal('${escapeHtml(file.file_id)}', '${escapeHtml(file.filename)}')">
+                            👥 Manage Sharing
+                        </button>
+                        <button class="btn btn-small" onclick="downloadFile('${escapeHtml(file.file_id)}', '${escapeHtml(file.filename)}')">
+                            ⬇️ Download
+                        </button>
+                    </div>
+                `;
+                mySharedGrid.appendChild(fileCard);
+            });
+        }
+
+        // Utility functions
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function showEmailValidation(message, type) {
+            const validationDiv = document.getElementById('emailValidation');
+            validationDiv.textContent = message;
+            validationDiv.className = `email-validation ${type}`;
+        }
+
+        function showProgress(percent, text) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressBar.style.display = 'block';
+            progressFill.style.width = percent + '%';
+            progressText.textContent = text || percent + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+        }
+
+        function showStatusMessage(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = `status-message status-${type}`;
+            statusElement.style.display = 'block';
+            
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 4000);
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Enhanced user search with better error handling
+        async function searchUsers(query) {
+            // Cancel previous search
+            if (searchAbortController) {
+                searchAbortController.abort();
+            }
+            
+            if (query.length < 2) {
+                hideSearchResults();
+                return;
+            }
+
+            const token = await getAccessToken();
+            if (!token) return;
+
+            try {
+                isSearching = true;
+                showSearchSpinner();
+                showEmailValidation('🔍 Searching for users...', 'info');
+
+                searchAbortController = new AbortController();
+                
+                const response = await fetch(`http://localhost:8000/users/search?q=${encodeURIComponent(query)}&limit=8`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    signal: searchAbortController.signal
+                });
+
+                if (response.ok) {
+                    const users = await response.json();
+                    currentSearchResults = users;
+                    displaySearchResults(users, query);
+                    
+                    if (users.length > 0) {
+                        showEmailValidation(`Found ${users.length} user(s). Select one or enter email directly.`, 'valid');
+                    } else {
+                        showEmailValidation('No users found. Enter any email address to share.', 'info');
+                    }
+                } else {
+                    console.error('Failed to search users:', response.status);
+                    hideSearchResults();
+                    showEmailValidation('Search failed. You can still enter any email address.', 'info');
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error searching users:', error);
+                    hideSearchResults();
+                    showEmailValidation('Search error. You can still enter any email address.', 'info');
+                }
+            } finally {
+                isSearching = false;
+                hideSearchSpinner();
+            }
+        }
+
+        function displaySearchResults(users, query) {
+            const resultsDiv = document.getElementById('userSearchResults');
+            const searchInput = document.getElementById('shareEmail');
+            
+            if (users.length === 0) {
+                resultsDiv.innerHTML = '<div class="search-no-results">No users found matching your search</div>';
+                resultsDiv.classList.add('show');
+                searchInput.classList.add('has-results');
+                return;
+            }
+
+            // Highlight matching text
+            const highlightMatch = (text, query) => {
+                const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+                return text.replace(regex, '<strong>$1</strong>');
+            };
+
+            resultsDiv.innerHTML = users.map((user, index) => {
+                // Show different styling for real vs mock users
+                const isReal = user.source === 'auth0';
+                const statusBadge = isReal 
+                    ? '<span style="color: #27ae60; font-size: 0.8em;">✅ Real User</span>'
+                    : '<span style="color: #f39c12; font-size: 0.8em;">🎭 Demo User</span>';
+                
+                return `
+                    <div class="search-result-item ${isReal ? 'real-user' : 'demo-user'}" data-index="${index}" onclick="selectUserFromSearch(${index})">
+                        <img src="${user.picture}" alt="${escapeHtml(user.name)}" class="user-avatar-small" onerror="this.src='https://via.placeholder.com/32'">
+                        <div class="user-info-search">
+                            <div class="user-name-search">${highlightMatch(escapeHtml(user.name), query)}</div>
+                            <div class="user-email-search">${highlightMatch(user.email, query)} ${statusBadge}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            resultsDiv.classList.add('show');
+            searchInput.classList.add('has-results');
+            keyboardSelectedIndex = -1;
+        }
+
+        function selectUserFromSearch(index) {
+            if (index >= 0 && index < currentSearchResults.length) {
+                const user = currentSearchResults[index];
+                selectUser(user);
+            }
+        }
+
+        function selectUser(user) {
+            selectedUserForSharing = user;
+            
+            // Update search input
+            const searchInput = document.getElementById('shareEmail');
+            searchInput.value = user.name;
+            searchInput.classList.remove('has-results');
+            
+            // Show selected user card
+            showSelectedUser(user);
+            
+            // Hide search results
+            hideSearchResults();
+            
+            // Update validation
+            showEmailValidation(`✅ Ready to share with ${user.name}`, 'valid');
+        }
+
+        function showSelectedUser(user) {
+            const container = document.getElementById('selectedUserContainer');
+            container.innerHTML = `
+                <div class="selected-user-card">
+                    <img src="${user.picture}" alt="${escapeHtml(user.name)}" class="selected-user-avatar" onerror="this.src='https://via.placeholder.com/40'">
+                    <div class="selected-user-info">
+                        <div class="selected-user-name">${escapeHtml(user.name)}</div>
+                        <div class="selected-user-email">${user.email}</div>
+                    </div>
+                    <button class="remove-selected-user" onclick="clearSelectedUser()" title="Remove selected user">×</button>
+                </div>
+            `;
+            container.classList.add('show');
+        }
+
+        function clearSelectedUser() {
+            selectedUserForSharing = null;
+            document.getElementById('shareEmail').value = '';
+            document.getElementById('shareEmail').classList.remove('has-results');
+            document.getElementById('selectedUserContainer').classList.remove('show');
+            document.getElementById('selectedUserContainer').innerHTML = '';
+            showEmailValidation('', '');
+            hideSearchResults();
+        }
+
+        function hideSearchResults() {
+            const resultsDiv = document.getElementById('userSearchResults');
+            const searchInput = document.getElementById('shareEmail');
+            
+            resultsDiv.classList.remove('show');
+            searchInput.classList.remove('has-results');
+            currentSearchResults = [];
+            keyboardSelectedIndex = -1;
+        }
+
+        function showSearchSpinner() {
+            document.getElementById('searchSpinner').classList.add('show');
+            document.getElementById('shareEmail').classList.add('searching');
+        }
+
+        function hideSearchSpinner() {
+            document.getElementById('searchSpinner').classList.remove('show');
+            document.getElementById('shareEmail').classList.remove('searching');
+        }
+
+        // Enhanced keyboard navigation
+        function handleSearchKeyboard(event) {
+            const resultsDiv = document.getElementById('userSearchResults');
+            
+            if (!resultsDiv.classList.contains('show') || currentSearchResults.length === 0) {
+                return;
+            }
+            
+            switch (event.key) {
+                case 'ArrowDown':
+                    event.preventDefault();
+                    keyboardSelectedIndex = Math.min(keyboardSelectedIndex + 1, currentSearchResults.length - 1);
+                    updateKeyboardSelection();
+                    break;
+                    
+                case 'ArrowUp':
+                    event.preventDefault();
+                    keyboardSelectedIndex = Math.max(keyboardSelectedIndex - 1, -1);
+                    updateKeyboardSelection();
+                    break;
+                    
+                case 'Enter':
+                    event.preventDefault();
+                    if (keyboardSelectedIndex >= 0) {
+                        selectUserFromSearch(keyboardSelectedIndex);
+                    } else {
+                        // Try to share with entered email
+                        shareFileAdvanced();
+                    }
+                    break;
+                    
+                case 'Escape':
+                    hideSearchResults();
+                    break;
+            }
+        }
+
+        function updateKeyboardSelection() {
+            const items = document.querySelectorAll('.search-result-item');
+            items.forEach((item, index) => {
+                item.classList.remove('keyboard-selected');
+                if (index === keyboardSelectedIndex) {
+                    item.classList.add('keyboard-selected');
+                    item.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🌟 Cloud File Service starting...');
+            
+            // Initialize Auth0
+            initAuth0();
+
+            // Add event listeners
+            document.getElementById('loginBtn').addEventListener('click', login);
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('refreshBtn').addEventListener('click', loadUserFiles);
+
+            // File input
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                files.forEach(uploadFile);
+            });
+
+            // Drag and drop
+            const uploadArea = document.getElementById('uploadArea');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files);
+                files.forEach(uploadFile);
+            });
+
+            // Enhanced search functionality
+            const searchInput = document.getElementById('shareEmail');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.trim();
+                    
+                    // Clear selected user if input changes
+                    if (selectedUserForSharing && query !== selectedUserForSharing.name) {
+                        clearSelectedUser();
+                    }
+                    
+                    // Clear existing timeout
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    
+                    // Debounced search
+                    searchTimeout = setTimeout(() => {
+                        if (query && !selectedUserForSharing) {
+                            searchUsers(query);
+                        } else if (!query) {
+                            hideSearchResults();
+                            showEmailValidation('', '');
+                        }
+                    }, 300);
+                });
+
+                // Keyboard navigation
+                searchInput.addEventListener('keydown', handleSearchKeyboard);
+            }
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.user-search-container')) {
+                    hideSearchResults();
+                }
+            });
+
+            // Close modal when clicking outside
+            window.addEventListener('click', (e) => {
+                const modal = document.getElementById('sharingModal');
+                if (e.target === modal) {
+                    closeSharingModal();
+                }
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const modal = document.getElementById('sharingModal');
+                    if (modal && modal.style.display === 'block') {
+                        closeSharingModal();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

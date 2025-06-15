@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+  metadata-db:
+    image: postgres:13
+    volumes:
+      - metadata_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: metadata_user
+      POSTGRES_PASSWORD: metadata_password
+      POSTGRES_DB: metadata_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metadata_user -d metadata_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sync-db:
+    image: postgres:13
+    volumes:
+      - sync_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: sync_user
+      POSTGRES_PASSWORD: sync_password
+      POSTGRES_DB: sync_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sync_user -d sync_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  metadata-service:
+    build:
+      context: ./backend/metadata-service
+      dockerfile: Dockerfile
+    depends_on:
+      metadata-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://metadata_user:metadata_password@metadata-db:5432/metadata_db
+      - AUTH0_DOMAIN=dev-mc721bw3z72t3xex.us.auth0.com
+      - API_AUDIENCE=https://cloud-api.rakai/
+      - ALGORITHMS=RS256
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/metadata-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  sync-service:
+    build:
+      context: ./backend/sync-service
+      dockerfile: Dockerfile
+    depends_on:
+      sync-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://sync_user:sync_password@sync-db:5432/sync_db
+      - AUTH0_DOMAIN=dev-mc721bw3z72t3xex.us.auth0.com
+      - API_AUDIENCE=https://cloud-api.rakai/
+      - ALGORITHMS=RS256
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend/sync-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  block-storage:
+    build:
+      context: ./backend/block-storage
+      dockerfile: Dockerfile
+    depends_on:
+      - minio
+    environment:
+      - PYTHONPATH=/app
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_BUCKET=chunks
+      - AUTH0_DOMAIN=dev-mc721bw3z72t3xex.us.auth0.com
+      - API_AUDIENCE=https://cloud-api.rakai/
+      - ALGORITHMS=RS256
+      - CORS_ORIGINS=["http://localhost:80"]
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./backend/block-storage:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  test-runner:
+    image: python:3.10
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: bash -c "pip install requests && python test-endpoints.py"
+    depends_on:
+      - block-storage
+      - minio
+    profiles:
+      - test
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - metadata-service
+      - block-storage
+      - chunker-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  chunker-service:
+    build:
+      context: ./backend/chunker-service
+      dockerfile: Dockerfile
+    environment:
+      - AUTH0_DOMAIN=dev-mc721bw3z72t3xex.us.auth0.com
+      - API_AUDIENCE=https://cloud-api.rakai/
+      - ALGORITHMS=RS256
+      - METADATA_SERVICE_URL=http://metadata-service:8000
+      - BLOCK_STORAGE_SERVICE_URL=http://block-storage:8000
+      - SYNC_SERVICE_URL=http://sync-service:8000
+      - INDEXER_SERVICE_URL=http://indexer-service:8004
+      - DEFAULT_CHUNK_SIZE=4194304  # 🚀 UPDATED: 4MB chunks
+      - MAX_FILE_SIZE=1073741824
+    volumes:
+      - ./backend/chunker-service:/app
+    depends_on:
+      - metadata-service
+      - block-storage
+      - sync-service
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+volumes:
+  metadata_data:
+  sync_data:
+  minio_data:
+  chunker_watch:
